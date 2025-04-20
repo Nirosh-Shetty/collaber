@@ -1,8 +1,8 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import router from "./routes/Route";
 import cors from "cors";
-
 dotenv.config(); // Load environment variables
 
 const app = express();
@@ -17,6 +17,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "role"],
   })
 );
+app.use("/api", router);
 
 const PORT = process.env.PORT || 8000;
 const MONGO_URI = process.env.MONGO_URI;
