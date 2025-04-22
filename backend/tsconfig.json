@@ -9,6 +9,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "config/passport.js"],
   "exclude": ["node_modules", "dist"]
 }

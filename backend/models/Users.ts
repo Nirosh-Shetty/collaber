@@ -1,31 +1,33 @@
 import mongoose, { Schema, model, Types, Document } from "mongoose";
-
+import { IUser } from "../types/user";
 // Interface for a User
-export interface IUser extends Document {
-  name: string;
-  username: string;
-  email: string;
-  password: string;
-  role: "influencer" | "brand" | "manager";
-  profilePicture?: string;
-  rating: number;
-  totalReviews: number;
-  influencerDetails?: {
-    followers: number;
-    niche: string;
-    socialLinks: Map<string, string>;
-    collaborations: Types.ObjectId[];
-  };
-  brandDetails?: {
-    companyName: string;
-    website: string;
-    brandCategory: string;
-    collaborations: Types.ObjectId[];
-  };
-  //   managerDetails?: {
-  //     managedInfluencers: Types.ObjectId[];
-  //   };
-}
+//TODO: you can make saparete folder called types to keep this IUser
+// export interface IUser extends Document {
+//   _id: Types.ObjectId; // 👈 Add this line
+//   name: string;
+//   username: string;
+//   email: string;
+//   password: string;
+//   role: "influencer" | "brand" | "manager";
+//   profilePicture?: string;
+//   rating: number;
+//   totalReviews: number;
+//   authProvider: "local" | "google" | "facebook";
+//   googleId?: string;
+//   facebookId?: string;
+//   influencerDetails?: {
+//     followers: number;
+//     niche: string;
+//     socialLinks: Map<string, string>;
+//     collaborations: Types.ObjectId[];
+//   };
+//   brandDetails?: {
+//     companyName: string;
+//     website: string;
+//     brandCategory: string;
+//     collaborations: Types.ObjectId[];
+//   };
+// }
 
 // Mongoose Schema
 const UserSchema = new Schema<IUser>(
@@ -47,6 +49,12 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, "Password is required"],
     },
+    authProvider: {
+      type: String,
+      enum: ["local", "google", "facebook"],
+    },
+    googleId: String,
+    facebookId: String,
     role: {
       type: String,
       enum: ["influencer", "brand", "manager"],
