@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { generateToken } from "../utils/generateToken";
 import UserModel from "../models/Users";
 import bcryptjs from "bcryptjs";
-import { apiResponse } from "../types/apiResponse";
+// import { apiResponse } from "../types/apiResponse";
 
 export const signIn = async (req: Request, res: Response): Promise<any> => {
   const { email, password } = req.body;
@@ -51,6 +51,13 @@ export const signUp = async (req: Request, res: Response) => {
     });
     const token = generateToken(user._id.toString(), user.role);
 
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
+      sameSite: "strict",
+    });
+
     res.status(201).json({
       user: {
         id: user._id,
@@ -58,7 +65,7 @@ export const signUp = async (req: Request, res: Response) => {
         username: user.username,
         role: user.role,
       },
-      token,
+      // token,
     });
   } catch (error) {
     res.status(500).json({ message: "Error creating user", error });

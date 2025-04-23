@@ -4,6 +4,7 @@ import {
   Strategy as GoogleStrategy,
   VerifyCallback,
 } from "passport-google-oauth20";
+import { Strategy as FacebookStrategy } from "passport-facebook";
 import UserModel from "../models/Users"; // Your user model
 import dotenv from "dotenv";
 import { Request } from "express";
@@ -14,7 +15,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: "http://localhost:5000/api/auth/google/callback",
+      callbackURL: "http://localhost:8000/api/auth/google/callback",
       passReqToCallback: true, // Required to access req in callback
     },
     async (
@@ -30,6 +31,7 @@ passport.use(
         if (!role || !["influencer", "brand", "manager"].includes(role)) {
           return done(null, false, { message: "Invalid or missing role." });
         }
+        console.log("this is google profile", profile);
 
         // Check if user already exists
         let user = await UserModel.findOne({
@@ -42,8 +44,8 @@ passport.use(
             name: profile.displayName,
             email: profile.emails?.[0].value,
             username: profile.emails?.[0].value.split("@")[0],
-            profilePicture: profile.photos?.[0].value,
-            password: "GOOGLE_AUTH", // placeholder or null
+            // profilePicture: profile.photos?.[0].value,
+            // password: "GOOGLE_AUTH", // placeholder or null
             role,
           });
 
@@ -53,6 +55,59 @@ passport.use(
         done(null, user);
       } catch (err) {
         done(err, undefined);
+      }
+    }
+  )
+);
+
+passport.use(
+  new FacebookStrategy(
+    {
+      clientID: process.env.FACEBOOK_CLIENT_ID!,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+      callbackURL: "http://localhost:8000/api/auth/facebook/callback",
+      profileFields: ["id", "emails", "name", "picture.type(large)"],
+      passReqToCallback: true, // enable req access in verify callback
+    },
+    async (
+      req: Request,
+      accessToken: string,
+      refreshToken: string,
+      profile: any,
+      done: VerifyCallback
+    ) => {
+      try {
+        const role = req.query.role as string;
+
+        if (!role || !["influencer", "brand", "manager"].includes(role)) {
+          return done(null, false, { message: "Invalid or missing role." });
+        }
+
+        const email = profile.emails?.[0].value;
+
+        if (!email) {
+          return done(null, false, {
+            message: "Email not found in Facebook profile.",
+          });
+        }
+
+        let user = await UserModel.findOne({ email });
+        if (!user) {
+          user = new UserModel({
+            name: profile.displayName,
+            email: profile.emails?.[0].value,
+            username: profile.emails?.[0].value.split("@")[0],
+            // profilePicture: profile.photos?.[0].value,
+            // password: "FACEBOOK_AUTH", // just a placeholder
+            role,
+          });
+
+          await user.save();
+        }
+
+        return done(null, user);
+      } catch (err) {
+        return done(err, undefined);
       }
     }
   )

@@ -42,3 +42,14 @@ connectDB(); // Call the function to establish the connection
 app.listen(PORT, () => {
   console.log(`🚀 Server running at: http://localhost:${PORT}`);
 });
+
+import passport from "passport";
+import session from "express-session";
+import "./config/passport"; // this should point to the config file above
+
+// Session (required by some strategies, even if you disable it later)
+app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
+
+// Passport init
+app.use(passport.initialize());
+app.use(passport.session());
