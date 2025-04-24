@@ -47,7 +47,7 @@ const UserSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      // required: [true, "Password is required"],
     },
     authProvider: {
       type: String,
@@ -92,10 +92,6 @@ const UserSchema = new Schema<IUser>(
     timestamps: true, // Adds createdAt and updatedAt automatically
   }
 );
-
-// Indexes for fast lookup
-UserSchema.index({ username: 1 });
-UserSchema.index({ email: 1 });
 
 const UserModel =
   (mongoose.models.User as mongoose.Model<IUser>) ||

@@ -26,11 +26,12 @@ passport.use(
       done: VerifyCallback
     ) => {
       try {
-        const role = req.query.role as string;
+        const role = req.query.state as string;
 
-        if (!role || !["influencer", "brand", "manager"].includes(role)) {
-          return done(null, false, { message: "Invalid or missing role." });
-        }
+        console.log(role, "this is role from query");
+        // if (!role || !["influencer", "brand", "manager"].includes(role)) {
+        //   return done(null, false, { message: "Invalid or missing role." });
+        // }
         console.log("this is google profile", profile);
 
         // Check if user already exists
@@ -43,6 +44,7 @@ passport.use(
           user = new UserModel({
             name: profile.displayName,
             email: profile.emails?.[0].value,
+            //TODO: check if username is unique if not assign a radom yet relatable username
             username: profile.emails?.[0].value.split("@")[0],
             // profilePicture: profile.photos?.[0].value,
             // password: "GOOGLE_AUTH", // placeholder or null
@@ -54,6 +56,7 @@ passport.use(
 
         done(null, user);
       } catch (err) {
+        console.log(err, "this is error in google strategy");
         done(err, undefined);
       }
     }

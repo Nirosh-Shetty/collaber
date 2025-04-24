@@ -1,27 +1,35 @@
 import express, { Response, Request } from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { signIn } from "../controllers/auth.controller";
+import { signIn, signUp } from "../controllers/auth.controller";
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
 const authRouter = express.Router();
 
 authRouter.post("/signin", signIn);
+authRouter.post("/signup", signUp);
 
-authRouter.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+authRouter.get("/google", (req, res, next): any => {
+  const { role } = req.query;
+
+  if (!role || !["influencer", "brand", "manager"].includes(role as string)) {
+    return res.status(400).json({ message: "Missing or invalid role" });
+  }
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    state: role as string,
+  })(req, res, next);
+});
 
 authRouter.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "/signin",
+    failureRedirect: "http://localhost:3000/signin",
     session: false,
   }),
   async (req: Request, res: Response): Promise<void> => {
     const user = req.user as IUser;
-
+    console.log(req.query);
     if (!user || typeof user !== "object") {
       res.status(401).json({ message: "Authentication failed" });
       return;
@@ -38,7 +46,7 @@ authRouter.get(
       sameSite: "strict",
     });
     // TODO: keep this in .env file
-    res.redirect(`http://localhost:3000/dashboard?token=${token}`);
+    res.redirect(`http://localhost:3000/dashboard`);
   }
 );
 

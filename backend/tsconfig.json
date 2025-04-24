@@ -8,7 +8,8 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
+    // "typeRoots": ["./node_modules/@types", "./types"]
   },
-  "include": ["./**/*.ts", "config/passport.js"],
+  "include": ["./**/*.ts", "config/passport.js", "src", "types"],
   "exclude": ["node_modules", "dist"]
 }

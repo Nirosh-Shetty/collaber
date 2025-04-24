@@ -20,6 +20,13 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
 
     const token = generateToken(user._id.toString(), user.role);
 
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
+      sameSite: "strict",
+    });
+
     return res.json({
       user: {
         id: user._id,
@@ -34,7 +41,7 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
-export const signUp = async (req: Request, res: Response) => {
+export const signUp = async (req: Request, res: Response): Promise<any> => {
   const { name, email, username, password, role } = req.body;
 
   try {

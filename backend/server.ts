@@ -53,3 +53,7 @@ app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
 // Passport init
 app.use(passport.initialize());
 app.use(passport.session());
+
+import cookieParser from "cookie-parser";
+
+app.use(cookieParser());
