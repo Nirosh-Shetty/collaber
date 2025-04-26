@@ -28,11 +28,11 @@ passport.use(
       try {
         const role = req.query.state as string;
 
-        console.log(role, "this is role from query");
+        // console.log(role, "this is role from query");
         // if (!role || !["influencer", "brand", "manager"].includes(role)) {
         //   return done(null, false, { message: "Invalid or missing role." });
         // }
-        console.log("this is google profile", profile);
+        // console.log("this is google profile", profile);
 
         // Check if user already exists
         let user = await UserModel.findOne({
@@ -54,7 +54,13 @@ passport.use(
           await user.save();
         }
 
-        done(null, user);
+        done(null, {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+        });
       } catch (err) {
         console.log(err, "this is error in google strategy");
         done(err, undefined);
@@ -107,8 +113,13 @@ passport.use(
 
           await user.save();
         }
-
-        return done(null, user);
+        return done(null, {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+        });
       } catch (err) {
         return done(err, undefined);
       }

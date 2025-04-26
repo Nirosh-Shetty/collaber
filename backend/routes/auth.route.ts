@@ -37,7 +37,7 @@ authRouter.get(
 
     // const safeUser = user as IUser;
 
-    const token = generateToken(user._id.toString(), user.role);
+    const token = generateToken(user.id.toString(), user.role);
 
     res.cookie("auth_token", token, {
       httpOnly: true,
