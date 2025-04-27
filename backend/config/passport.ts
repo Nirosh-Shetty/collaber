@@ -26,7 +26,7 @@ passport.use(
       done: VerifyCallback
     ) => {
       try {
-        const role = req.query.state as string;
+        const role = req.query?.state as string;
 
         // console.log(role, "this is role from query");
         // if (!role || !["influencer", "brand", "manager"].includes(role)) {
@@ -40,6 +40,11 @@ passport.use(
         });
 
         if (!user) {
+          if (!role) {
+            return done(null, false, {
+              message: "Role missing during signup.",
+            });
+          }
           // Create new user
           user = new UserModel({
             name: profile.displayName,
@@ -88,9 +93,9 @@ passport.use(
       try {
         const role = req.query.role as string;
 
-        if (!role || !["influencer", "brand", "manager"].includes(role)) {
-          return done(null, false, { message: "Invalid or missing role." });
-        }
+        // if (!role || !["influencer", "brand", "manager"].includes(role)) {
+        //   return done(null, false, { message: "Invalid or missing role." });
+        // }
 
         const email = profile.emails?.[0].value;
 

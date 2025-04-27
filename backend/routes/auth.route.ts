@@ -12,9 +12,9 @@ authRouter.post("/signup", signUp);
 authRouter.get("/google", (req, res, next): any => {
   const { role } = req.query;
 
-  if (!role || !["influencer", "brand", "manager"].includes(role as string)) {
-    return res.status(400).json({ message: "Missing or invalid role" });
-  }
+  // if (!role || !["influencer", "brand", "manager"].includes(role as string)) {
+  //   return res.status(400).json({ message: "Missing or invalid role" });
+  // }
   passport.authenticate("google", {
     scope: ["profile", "email"],
     state: role as string,
@@ -50,11 +50,14 @@ authRouter.get(
   }
 );
 
-authRouter.get(
-  "/facebook",
-  passport.authenticate("facebook", { scope: ["email"] })
-);
+authRouter.get("/facebook", (req, res, next) => {
+  const { role } = req.query;
 
+  passport.authenticate("facebook", {
+    scope: ["email"],
+    state: role ? (role as string) : undefined,
+  })(req, res, next);
+});
 authRouter.get(
   "/facebook/callback",
   passport.authenticate("facebook", {
