@@ -5,11 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
-  title: "Signup Form",
-  description: "Role-based signup form with OTP verification",
-};
-
 export default function RootLayout({
   children,
 }: {

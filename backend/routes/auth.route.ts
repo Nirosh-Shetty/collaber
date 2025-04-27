@@ -29,7 +29,7 @@ authRouter.get(
   }),
   async (req: Request, res: Response): Promise<void> => {
     const user = req.user as IUser;
-    console.log(req.query);
+    // console.log(req.query);
     if (!user || typeof user !== "object") {
       res.status(401).json({ message: "Authentication failed" });
       return;
@@ -43,8 +43,9 @@ authRouter.get(
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
-      sameSite: "strict",
+      sameSite: "lax",
     });
+    console.log("this is token", token);
     // TODO: keep this in .env file
     res.redirect(`http://localhost:3000/dashboard`);
   }
@@ -85,5 +86,21 @@ authRouter.get(
     res.redirect(`http://localhost:3000/dashboard`);
   }
 );
+
+// POST /api/auth/logout
+authRouter.post("/logout", (req, res): any => {
+  try {
+    res.clearCookie("auth_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+    });
+    return res.status(200).json({ message: "Logged out" });
+  } catch (error) {
+    console.error("Error during logout:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 export default authRouter;
