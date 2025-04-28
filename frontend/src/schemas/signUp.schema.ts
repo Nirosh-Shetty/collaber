@@ -14,5 +14,5 @@ export const signUpSchema = z.object({
   username: usernameSchema,
   email: z.string().email({ message: "Enter a valid email" }),
   password: z.string().min(6, "Password must contian atleast 6 words"),
-  otp: z.number().max(20, "Username shouldn't exeed 20 charectors"),
+  // otp: z.number().max(20, "Username shouldn't exeed 20 charectors"),
 });

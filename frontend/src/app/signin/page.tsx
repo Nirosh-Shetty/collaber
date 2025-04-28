@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { signInSchema } from "@/schemas/signIn.schema";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { signInSchema } from "@/schemas/signIn.schema";
+import axios from "axios";
 
 export default function SigninPage() {
   const router = useRouter();
@@ -25,13 +25,14 @@ export default function SigninPage() {
     },
   });
   const [isLoading, setIsLoading] = useState(false);
+
   const handleSignIn = async (data: z.infer<typeof signInSchema>) => {
     setIsLoading(true);
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
         {
-          email: data.identifier,
+          identifier: data.identifier,
           password: data.password,
         },
         {
@@ -73,12 +74,17 @@ export default function SigninPage() {
           {/* Email/Phone/Username */}
           <div className="space-y-2">
             <Label htmlFor="identifier">Email / Phone / Username</Label>
+
             <Input
               id="identifier"
               placeholder="Enter your email, phone or username"
               required
               {...register("identifier")}
             />
+            <p className="text-xs text-muted-foreground">
+              Enter the email, phone number, or username associated with your
+              account.
+            </p>
           </div>
 
           {/* Password */}
@@ -99,6 +105,10 @@ export default function SigninPage() {
               required
               {...register("password")}
             />
+            <p className="text-xs text-muted-foreground">
+              Your password must be at least 8 characters long and include
+              letters, numbers, and special characters.
+            </p>
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
