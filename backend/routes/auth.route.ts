@@ -1,6 +1,5 @@
 import express, { Response, Request } from "express";
 import passport from "passport";
-import jwt from "jsonwebtoken";
 import { signIn, signUp } from "../controllers/auth.controller";
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
@@ -45,7 +44,6 @@ authRouter.get(
       maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
       sameSite: "lax",
     });
-    console.log("this is token", token);
     // TODO: keep this in .env file
     res.redirect(`http://localhost:3000/dashboard`);
   }
@@ -96,6 +94,7 @@ authRouter.post("/logout", (req, res): any => {
       sameSite: "strict",
       path: "/",
     });
+    // console.log("logout successful");
     return res.status(200).json({ message: "Logged out" });
   } catch (error) {
     console.error("Error during logout:", error);

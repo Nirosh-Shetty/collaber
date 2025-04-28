@@ -11,8 +11,10 @@ import { signUpSchema } from "@/schemas/signUp.schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
+  const router = useRouter();
   const { register, handleSubmit, watch, setValue } = useForm<
     z.infer<typeof signUpSchema>
   >({
@@ -27,7 +29,8 @@ export default function SignupPage() {
 
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isOtpSent, setIsOtpSent] = useState(false);
-
+  const [otpCooldown, setOtpCooldown] = useState(false);
+  const [otpCooldownTime, setOtpCooldownTime] = useState(60); // 1 minute cooldown
   const handleRoleSelect = (role: "influencer" | "brand" | "manager") => {
     setSelectedRole(role);
     setValue("role", role);
@@ -35,6 +38,20 @@ export default function SignupPage() {
 
   const handleGetOtp = () => {
     setIsOtpSent(true);
+    setOtpCooldown(true);
+    setOtpCooldownTime(60);
+
+    const intervalId = setInterval(() => {
+      setOtpCooldownTime((prev) => {
+        if (prev <= 1) {
+          setOtpCooldown(false);
+          clearInterval(intervalId); // Stop the interval
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     // In a real app, you would trigger OTP sending here
   };
 
@@ -146,7 +163,7 @@ export default function SignupPage() {
                 type="button"
                 variant="outline"
                 onClick={handleGetOtp}
-                disabled={!selectedRole}
+                disabled={!selectedRole || otpCooldown}
                 className="whitespace-nowrap"
               >
                 Get OTP
@@ -186,9 +203,8 @@ export default function SignupPage() {
             disabled={!selectedRole}
             className="w-full"
             onClick={() => {
-              window.open(
-                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/google?role=${role}`,
-                "_self"
+              router.push(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/google?role=${role}`
               );
             }}
           >
@@ -221,9 +237,8 @@ export default function SignupPage() {
             disabled={!selectedRole}
             className="w-full"
             onClick={() => {
-              window.open(
-                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/facebook/callback?state=${role}`,
-                "_self"
+              router.push(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/facebook?role=${role}`
               );
             }}
           >

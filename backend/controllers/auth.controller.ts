@@ -5,14 +5,22 @@ import bcryptjs from "bcryptjs";
 // import { apiResponse } from "../types/apiResponse";
 
 export const signIn = async (req: Request, res: Response): Promise<any> => {
-  const { email, password } = req.body;
+  const { identifier, password } = req.body;
 
   try {
-    const user = await UserModel.findOne({ email }).lean();
+    const user = await UserModel.findOne({
+      $or: [
+        { email: identifier },
+        { username: identifier },
+        { phoneNumber: identifier },
+      ],
+    }).lean();
     if (!user) {
       return res.status(401).json({ message: "User not Found" });
     }
-
+    if (user.authProvider !== "local") {
+      return res.status(401).json({ message: "User not Found in local" });
+    }
     const isPasswordCorrect = await bcryptjs.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res.status(401).json({ message: "Incorrect password" });

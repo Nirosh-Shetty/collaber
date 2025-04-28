@@ -12,8 +12,11 @@ import { useForm } from "react-hook-form";
 import { signInSchema } from "@/schemas/signIn.schema";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function SigninPage() {
+  const router = useRouter();
   const { register, handleSubmit } = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -22,14 +25,35 @@ export default function SigninPage() {
     },
   });
   const [isLoading, setIsLoading] = useState(false);
-
   const handleSignIn = async (data: z.infer<typeof signInSchema>) => {
-    // e.preventDefault();
     setIsLoading(true);
     try {
-    } catch (error) {
-      console.error("Error signing in:", error);
-      alert("Error signing in. Please try again.");
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
+        {
+          email: data.identifier,
+          password: data.password,
+        },
+        {
+          withCredentials: true, // Include credentials in the request
+        }
+      );
+      router.push("/dashboard");
+    } catch (error: any) {
+      // Check if error has a response
+      if (error.response) {
+        // Log the actual message from the backend
+        console.error(
+          "Error signing in:",
+          error.response.data.message || error.response.data
+        );
+        alert(
+          error.response.data.message || "Error signing in. Please try again."
+        );
+      } else {
+        console.error("Error signing in:", error.message);
+        alert("Error signing in. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -53,6 +77,7 @@ export default function SigninPage() {
               id="identifier"
               placeholder="Enter your email, phone or username"
               required
+              {...register("identifier")}
             />
           </div>
 
@@ -72,6 +97,7 @@ export default function SigninPage() {
               type="password"
               placeholder="Enter your password"
               required
+              {...register("password")}
             />
           </div>
 
@@ -97,9 +123,8 @@ export default function SigninPage() {
             variant="outline"
             className="w-full"
             onClick={() => {
-              window.open(
-                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/google`,
-                "_self"
+              router.push(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/google`
               );
             }}
           >
@@ -131,9 +156,8 @@ export default function SigninPage() {
             variant="outline"
             className="w-full"
             onClick={() => {
-              window.open(
-                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/facebook`,
-                "_self"
+              router.push(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/facebook`
               );
             }}
           >
