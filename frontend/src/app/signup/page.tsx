@@ -19,6 +19,7 @@ import { signUpSchema } from "@/schemas/signUp.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { error } from "console";
 
 const roles = [
   { label: "Influencer", value: "influencer", Icon: UserIcon },
@@ -57,7 +58,7 @@ export default function SignupPage() {
   // Debounce Username Check
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!username || username.length < 3) {
+      if (!username || errors?.username) {
         setUsernameStatus("idle");
         setUsernameSuggestions([]);
         return;

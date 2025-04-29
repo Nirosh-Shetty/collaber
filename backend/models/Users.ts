@@ -83,6 +83,9 @@ const UserSchema = new Schema<IUser>(
       },
       required: false,
     },
+    isVerified: { type: Boolean, default: false },
+    reservationExpiresAt: { type: Date, default: null },
+    isTempAccount: { type: Boolean, default: false },
 
     //   managerDetails: {
     //     managedInfluencers: [{ type: Schema.Types.ObjectId, ref: "User" }],

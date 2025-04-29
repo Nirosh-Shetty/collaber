@@ -25,4 +25,7 @@ export interface IUser extends Document {
     brandCategory: string;
     collaborations: Types.ObjectId[];
   };
+  isVerified: boolean;
+  reservationExpiresAt?: Date; 
+  isTempAccount?: boolean;   
 }
