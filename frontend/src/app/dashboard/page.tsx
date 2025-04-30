@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 const page = () => {
   const router = useRouter();
 
-  const handleLogout = async () => {
+  const handlesignout = async () => {
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/logout`,
-        {}, // no body for logout
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signout`,
+        {}, // no body for signout
         {
           withCredentials: true, // Important for cookies/session handling
         }
@@ -18,7 +18,7 @@ const page = () => {
       // If successful, navigate
       router.push("/signin");
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("signout error:", error);
     }
   };
   return (
@@ -26,9 +26,9 @@ const page = () => {
       <div className="text-red text-9xl">Dashboaf rd</div>;
       <button
         className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-700"
-        onClick={handleLogout}
+        onClick={handlesignout}
       >
-        Logout
+        signout
       </button>
     </>
   );

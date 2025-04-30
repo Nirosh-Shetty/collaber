@@ -15,12 +15,11 @@ import {
   LoaderIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { signUpSchema } from "@/schemas/signUp.schema";
+import { signUpSchema, usernameSchema } from "@/schemas/signUp.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { error } from "console";
-
+import axios from "axios";
 const roles = [
   { label: "Influencer", value: "influencer", Icon: UserIcon },
   { label: "Brand", value: "brand", Icon: BuildingIcon },
@@ -30,10 +29,10 @@ const roles = [
 export default function SignupPage() {
   const router = useRouter();
   const [usernameStatus, setUsernameStatus] = useState<
-    "idle" | "checking" | "available" | "taken"
+    "idle" | "checking" | "available" | "taken" | "reserved"
   >("idle");
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
-
+  const [usernameTouched, setUsernameTouched] = useState(false);
   const {
     register,
     handleSubmit,
@@ -56,9 +55,16 @@ export default function SignupPage() {
   const username = watch("username");
 
   // Debounce Username Check
+  const usernameValidation = usernameSchema.safeParse(username);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!username || errors?.username) {
+      if (!username) {
+        setUsernameStatus("idle");
+        setUsernameSuggestions([]);
+        return;
+      }
+      if (!usernameValidation.success) {
         setUsernameStatus("idle");
         setUsernameSuggestions([]);
         return;
@@ -76,14 +82,13 @@ export default function SignupPage() {
     try {
       // simulate server request
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const isAvailable = username.length > 5; // Mock condition
-      if (isAvailable) {
-        setUsernameStatus("available");
-        setUsernameSuggestions([]);
-      } else {
-        setUsernameStatus("taken");
-        setUsernameSuggestions([`${username}123`, `${username}_user`]);
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/check-username-unique`,
+        { username, email: getValues("email") }
+      );
+      setUsernameStatus(res?.data?.availability);
+      if (res?.data?.availability === "taken") {
+        setUsernameSuggestions(res?.data?.suggestions);
       }
     } catch (err) {
       console.error("Failed to check username availability");
@@ -97,17 +102,29 @@ export default function SignupPage() {
     setUsernameSuggestions([]);
   }
 
-  const onSubmit = (data: z.infer<typeof signUpSchema>) => {
+  const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
     console.log("Submitting form with data:", data);
+
+    try {
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup`,
+        {
+          ...data,
+        }
+      );
+    } catch (error) {}
+    const expiresAt = Date.now() + 60 * 60 * 1000; // 60 minutes expiry
     sessionStorage.setItem(
       "signupData",
       JSON.stringify({
-        role: selectedRole,
-        name: data.name,
+        // role: selectedRole,
+        // name: data.name,
         email: data.email,
-        username: data.username,
+        // username: data.username,
+        expiresAt,
       })
     );
+
     router.push("/verify-otp");
   };
 
@@ -199,14 +216,18 @@ export default function SignupPage() {
               placeholder="Choose a unique username"
               disabled={!selectedRole}
               {...register("username")}
+              onBlur={() => setUsernameTouched(true)}
               className={`pr-10 ${
-                usernameStatus === "available" && !errors?.username
+                usernameStatus === "available"
                   ? "border-green-500 focus-visible:ring-green-500"
                   : usernameStatus === "taken"
+                  ? "border-red-500 focus-visible:ring-red-500"
+                  : usernameTouched && !usernameValidation.success
                   ? "border-red-500 focus-visible:ring-red-500"
                   : ""
               }`}
               required
+              autoComplete="off"
             />
             {usernameStatus === "checking" && (
               <LoaderIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-muted-foreground" />
@@ -218,10 +239,19 @@ export default function SignupPage() {
               <XIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500" />
             )}
           </div>
-          {errors?.username ? (
-            <p className="text-xs text-red-400">{errors?.username?.message}</p>
+          {usernameTouched && !usernameValidation.success ? (
+            <p className="text-xs text-red-400">
+              {usernameValidation.error.errors[0].message}
+            </p>
           ) : usernameStatus === "available" ? (
             <p className="text-xs text-green-500">Username is available!</p>
+          ) : usernameStatus === "reserved" ? (
+            <p className="text-xs text-green-500">
+              You reserved this username earlier. Continue to verify your
+              account.
+            </p>
+          ) : usernameStatus === "taken" ? (
+            <p className="text-xs text-red-400">Username is unavailble. </p>
           ) : (
             <p className="text-xs text-muted-foreground">
               Choose a unique username. It can be changed later.

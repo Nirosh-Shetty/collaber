@@ -54,6 +54,9 @@ passport.use(
             // profilePicture: profile.photos?.[0].value,
             // password: "GOOGLE_AUTH", // placeholder or null
             role,
+            authProvider: "google",
+            isVerified: true,
+            isTempAccount: false,
           });
 
           await user.save();
@@ -114,6 +117,9 @@ passport.use(
             // profilePicture: profile.photos?.[0].value,
             // password: "FACEBOOK_AUTH", // just a placeholder
             role,
+            authProvider: "facebook",
+            isVerified: true,
+            isTempAccount: false,
           });
 
           await user.save();

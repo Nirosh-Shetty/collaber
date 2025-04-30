@@ -26,6 +26,7 @@ export interface IUser extends Document {
     collaborations: Types.ObjectId[];
   };
   isVerified: boolean;
-  reservationExpiresAt?: Date; 
-  isTempAccount?: boolean;   
+  reservationExpiresAt?: Date;
+  isTempAccount?: boolean;
+  otp?:number;
 }

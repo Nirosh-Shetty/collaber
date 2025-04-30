@@ -21,15 +21,19 @@ export default function VerifyOtpPage() {
   // Get email from session storage on component mount
   useEffect(() => {
     const signupData = sessionStorage.getItem("signupData");
-    if (signupData) {
-      const { email } = JSON.parse(signupData);
-      setEmail(email);
-      // Start countdown immediately when page loads
-      setCountdown(60);
-    } else {
-      // If no signup data, redirect back to signup
-      router.push("/signup");
+    if (!signupData) {
+      router.replace("/signup");
+      return;
     }
+    const { expiresAt } = JSON.parse(signupData);
+    if (Date.now() > expiresAt) {
+      sessionStorage.removeItem("signupData");
+      router.replace("/signup");
+    }
+    const { email } = JSON.parse(signupData);
+    setEmail(email);
+    // Start countdown immediately when page loads
+    setCountdown(60);
   }, [router]);
 
   // Handle countdown timer

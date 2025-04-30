@@ -1,8 +1,14 @@
 import express, { Response, Request } from "express";
 import passport from "passport";
-import { signIn, signUp } from "../controllers/auth.controller";
+import {
+  signIn,
+  signout,
+  signUp,
+  verifyOtp,
+} from "../controllers/auth.controller";
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
+import { checkUsernameUnique } from "../controllers/checkUsernameUnique.controller";
 const authRouter = express.Router();
 
 authRouter.post("/signin", signIn);
@@ -23,7 +29,7 @@ authRouter.get("/google", (req, res, next): any => {
 authRouter.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:3000/signin",
+    failureRedirect: `${process.env.FRONTEND_URL}/dashboard`,
     session: false,
   }),
   async (req: Request, res: Response): Promise<void> => {
@@ -45,7 +51,7 @@ authRouter.get(
       sameSite: "lax",
     });
     // TODO: keep this in .env file
-    res.redirect(`http://localhost:3000/dashboard`);
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
   }
 );
 
@@ -81,25 +87,15 @@ authRouter.get(
       sameSite: "strict",
     });
 
-    res.redirect(`http://localhost:3000/dashboard`);
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
   }
 );
 
-// POST /api/auth/logout
-authRouter.post("/logout", (req, res): any => {
-  try {
-    res.clearCookie("auth_token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-    });
-    // console.log("logout successful");
-    return res.status(200).json({ message: "Logged out" });
-  } catch (error) {
-    console.error("Error during logout:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+authRouter.post("/verifyOtp", verifyOtp);
+
+// POST /api/auth/signout
+authRouter.post("/signout", signout);
+
+authRouter.post("/check-username-unique", checkUsernameUnique);
 
 export default authRouter;
