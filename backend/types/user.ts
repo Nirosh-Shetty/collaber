@@ -28,5 +28,6 @@ export interface IUser extends Document {
   isVerified: boolean;
   reservationExpiresAt?: Date;
   isTempAccount?: boolean;
-  otp?:number;
+  otp?: string;
+  lastOtpSentAt?: Date;
 }

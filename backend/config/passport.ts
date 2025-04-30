@@ -8,6 +8,7 @@ import { Strategy as FacebookStrategy } from "passport-facebook";
 import UserModel from "../models/Users"; // Your user model
 import dotenv from "dotenv";
 import { Request } from "express";
+import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
 dotenv.config();
 
 passport.use(
@@ -46,11 +47,15 @@ passport.use(
             });
           }
           // Create new user
+          const usernameSuggested = await generateUsernameSuggestions(
+            profile.emails?.[0].value.split("@")[0],
+            1
+          );
           user = new UserModel({
             name: profile.displayName,
             email: profile.emails?.[0].value,
             //TODO: check if username is unique if not assign a radom yet relatable username
-            username: profile.emails?.[0].value.split("@")[0],
+            username: usernameSuggested[0],
             // profilePicture: profile.photos?.[0].value,
             // password: "GOOGLE_AUTH", // placeholder or null
             role,
@@ -94,7 +99,7 @@ passport.use(
       done: VerifyCallback
     ) => {
       try {
-        const role = req.query.role as string;
+        const role = req.query?.state as string;
 
         // if (!role || !["influencer", "brand", "manager"].includes(role)) {
         //   return done(null, false, { message: "Invalid or missing role." });
@@ -107,13 +112,16 @@ passport.use(
             message: "Email not found in Facebook profile.",
           });
         }
-
+        const usernameSuggested = await generateUsernameSuggestions(
+          profile.emails?.[0].value.split("@")[0],
+          1
+        );
         let user = await UserModel.findOne({ email });
         if (!user) {
           user = new UserModel({
             name: profile.displayName,
             email: profile.emails?.[0].value,
-            username: profile.emails?.[0].value.split("@")[0],
+            username: usernameSuggested[0],
             // profilePicture: profile.photos?.[0].value,
             // password: "FACEBOOK_AUTH", // just a placeholder
             role,

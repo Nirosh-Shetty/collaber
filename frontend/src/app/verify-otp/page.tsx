@@ -9,6 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
+import axios from "axios";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { verifySchema } from "@/schemas/verifyOtpSchema";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 export default function VerifyOtpPage() {
   const router = useRouter();
@@ -18,23 +23,43 @@ export default function VerifyOtpPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState("");
 
-  // Get email from session storage on component mount
+  const {
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<z.infer<typeof verifySchema>>({
+    resolver: zodResolver(verifySchema),
+  });
   useEffect(() => {
     const signupData = sessionStorage.getItem("signupData");
     if (!signupData) {
       router.replace("/signup");
       return;
     }
-    const { expiresAt } = JSON.parse(signupData);
-    if (Date.now() > expiresAt) {
+    const { reservationExpiresAt, email } = JSON.parse(signupData);
+    console.log(JSON.parse(signupData));
+    if (Date.now() > reservationExpiresAt) {
       sessionStorage.removeItem("signupData");
       router.replace("/signup");
+      return;
     }
-    const { email } = JSON.parse(signupData);
     setEmail(email);
-    // Start countdown immediately when page loads
-    setCountdown(60);
-  }, [router]);
+
+    const lastOtpSentAt = sessionStorage.getItem("lastOtpSentAt");
+    const now = Date.now();
+
+    if (lastOtpSentAt) {
+      const timeElapsed = Math.floor((now - parseInt(lastOtpSentAt)) / 1000);
+      const remaining = 60 - timeElapsed;
+      setCountdown(remaining > 0 ? remaining : 0);
+    } else {
+      // setTimeout(() => {
+      requestOtp();
+      // }, 2000);
+      // send if no OTP was sent earlier
+    }
+  }, []);
 
   // Handle countdown timer
   useEffect(() => {
@@ -44,6 +69,44 @@ export default function VerifyOtpPage() {
     }
   }, [countdown]);
 
+  const requestOtp = async () => {
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/request-otp`,
+        { email },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setCountdown(60);
+      sessionStorage.setItem("lastOtpSentAt", Date.now().toString());
+      setOtp(["", "", "", "", "", ""]);
+      // console.log(data);
+    } catch (error: any) {
+      console.log(error);
+      if (error.response?.data?.redirectTo) {
+        sessionStorage.removeItem("signupData");
+        sessionStorage.removeItem("lastOtpSentAt");
+        router.replace(error.response.data.redirectTo);
+      }
+      if (error.response?.data?.lastOtpSentAt) {
+        const timeElapsed = Math.floor(
+          (Date.now() - new Date(error.response.data.lastOtpSentAt).getTime()) /
+            1000
+        );
+        const remaining = 60 - timeElapsed;
+        setCountdown(remaining > 0 ? remaining : 0);
+        sessionStorage.setItem(
+          "lastOtpSentAt",
+          error.response.data.lastOtpSentAt?.toString()
+        );
+      }
+      setError(error.response?.data?.message || "failed to send OTP");
+      if (error.response?.status === 500) setCountdown(0);
+    }
+  };
   // Handle OTP input change
   const handleOtpChange = (index: number, value: string) => {
     // Only allow numbers
@@ -53,7 +116,7 @@ export default function VerifyOtpPage() {
     newOtp[index] = value;
 
     setOtp(newOtp);
-
+    setValue("otp", newOtp.join("")); // Update the form value
     // Auto-focus next input if current input is filled
     if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
@@ -94,39 +157,28 @@ export default function VerifyOtpPage() {
     }
   };
 
-  // Handle resend OTP
-  const handleResendOtp = () => {
-    // Here you would call your API to resend the OTP
-    // For now, we'll just reset the countdown
-    setCountdown(60);
-    setError("");
-  };
-
   // Handle verify OTP
-  const handleVerifyOtp = () => {
-    const otpValue = otp.join("");
-
-    // Check if OTP is complete
-    if (otpValue.length !== 6) {
-      setError("Please enter all 6 digits of the OTP");
-      return;
-    }
-
+  const handleSubmitOtp = async (data: z.infer<typeof verifySchema>) => {
     setIsVerifying(true);
-
-    // Here you would call your API to verify the OTP
-    // For now, we'll simulate a verification process
-    setTimeout(() => {
+    setError("");
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/verify-otp`,
+        {
+          email,
+          otp: data.otp,
+        }
+      );
+    } catch (error: any) {
+      console.error(error);
+      if (error.response?.data?.redirectTo) {
+        sessionStorage.removeItem("signupData");
+        sessionStorage.removeItem("lastOtpSentAt");
+        router.replace(error.response.data.redirectTo);
+      } else setError(error.response?.data?.message || "verification failed");
+    } finally {
       setIsVerifying(false);
-
-      // For demo purposes, let's say OTP "123456" is valid
-      if (otpValue === "123456") {
-        // Navigate to success page or dashboard
-        router.push("/dashboard");
-      } else {
-        setError("Invalid OTP. Please try again.");
-      }
-    }, 1500);
+    }
   };
 
   return (
@@ -149,39 +201,50 @@ export default function VerifyOtpPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="otp-0">Enter Verification Code</Label>
-            <div className="flex gap-2 justify-between">
-              {otp.map((digit, index) => (
-                <Input
-                  key={index}
-                  id={`otp-${index}`}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={index === 0 ? handlePaste : undefined}
-                  className="w-12 h-12 text-center text-lg"
-                />
-              ))}
+          <form onSubmit={handleSubmit(handleSubmitOtp)}>
+            <div className="space-y-2">
+              <Label htmlFor="otp-0">Enter Verification Code</Label>
+              <div className="flex gap-2 justify-between">
+                {otp.map((digit, index) => (
+                  <Input
+                    key={index}
+                    id={`otp-${index}`}
+                    type="text"
+                    inputMode="numeric"
+                    autoFocus={index === 0}
+                    autoComplete="one-time-code"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    onPaste={index === 0 ? handlePaste : undefined}
+                    className="w-12 h-12 text-center text-lg"
+                  />
+                ))}
+              </div>
+              {errors?.otp?.message ? (
+                <p className="text-sm text-red-500 mt-2">
+                  {errors.otp.message}
+                </p>
+              ) : error ? (
+                <p className="text-sm text-red-500 mt-2">{error}</p>
+              ) : (
+                ""
+              )}
+              <p className="text-xs text-muted-foreground">
+                Enter the 6-digit code sent to your email or phone number.
+              </p>
             </div>
-            {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
-            <p className="text-xs text-muted-foreground">
-              Enter the 6-digit code sent to your email or phone number.
-            </p>
-          </div>
 
-          <Button
-            type="button"
-            className="w-full"
-            onClick={handleVerifyOtp}
-            disabled={isVerifying || otp.join("").length !== 6}
-          >
-            {isVerifying ? "Verifying..." : "Verify Account"}
-          </Button>
-
+            <Button
+              type="submit"
+              className="w-full"
+              // onClick={handleVerifyOtp}
+              disabled={isVerifying || otp.join("").length !== 6}
+            >
+              {isVerifying ? "Verifying..." : "Verify Account"}
+            </Button>
+          </form>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
               Didn't receive the code?{" "}
@@ -190,7 +253,7 @@ export default function VerifyOtpPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={handleResendOtp}
+                  onClick={requestOtp}
                   className="text-purple-400 hover:text-purple-300"
                 >
                   Resend Code

@@ -87,10 +87,11 @@ const UserSchema = new Schema<IUser>(
     reservationExpiresAt: { type: Date, default: null },
     isTempAccount: { type: Boolean, default: false },
     otp: {
-      type: Number,
+      type: String,
       min: 100000,
       max: 999999,
     },
+    lastOtpSentAt :Date,
 
     //   managerDetails: {
     //     managedInfluencers: [{ type: Schema.Types.ObjectId, ref: "User" }],

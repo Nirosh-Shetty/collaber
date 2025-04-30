@@ -1,6 +1,7 @@
 import express, { Response, Request } from "express";
 import passport from "passport";
 import {
+  requestOtp,
   signIn,
   signout,
   signUp,
@@ -60,7 +61,7 @@ authRouter.get("/facebook", (req, res, next) => {
 
   passport.authenticate("facebook", {
     scope: ["email"],
-    state: role ? (role as string) : undefined,
+    state: role as string,
   })(req, res, next);
 });
 authRouter.get(
@@ -91,7 +92,8 @@ authRouter.get(
   }
 );
 
-authRouter.post("/verifyOtp", verifyOtp);
+authRouter.post("/request-otp", requestOtp);
+authRouter.post("/verify-otp", verifyOtp);
 
 // POST /api/auth/signout
 authRouter.post("/signout", signout);

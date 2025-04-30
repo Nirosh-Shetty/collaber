@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
 import Link from "next/link";
 import { signUpSchema, usernameSchema } from "@/schemas/signUp.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import axios from "axios";
 const roles = [
@@ -34,11 +34,12 @@ export default function SignupPage() {
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const [usernameTouched, setUsernameTouched] = useState(false);
   const {
+    control,
     register,
     handleSubmit,
     watch,
     setValue,
-    setError,
+    // setError,
     getValues,
     formState: { isSubmitting, errors },
   } = useForm<z.infer<typeof signUpSchema>>({
@@ -52,33 +53,31 @@ export default function SignupPage() {
   });
 
   const selectedRole = watch("role");
-  const username = watch("username");
+  // const username = watch("username");
+  const username = useWatch({ control, name: "username" });
 
   // Debounce Username Check
   const usernameValidation = usernameSchema.safeParse(username);
-
+  const lastCheckedUsername = useRef<string | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!username) {
+      if (!username || !usernameValidation.success) {
         setUsernameStatus("idle");
         setUsernameSuggestions([]);
         return;
       }
-      if (!usernameValidation.success) {
-        setUsernameStatus("idle");
-        setUsernameSuggestions([]);
-        return;
-      }
-
+      if (username === lastCheckedUsername.current) return;
       checkUsernameAvailability(username);
     }, 1000);
 
     return () => clearTimeout(timer);
   }, [username]);
-
+  useEffect(() => {
+    sessionStorage.removeItem("signupData");
+  }, []);
   async function checkUsernameAvailability(username: string) {
     setUsernameStatus("checking");
-
+    lastCheckedUsername.current = username;
     try {
       // simulate server request
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -106,26 +105,36 @@ export default function SignupPage() {
     console.log("Submitting form with data:", data);
 
     try {
-      const res = await axios.post(
+      await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup`,
         {
           ...data,
         }
       );
-    } catch (error) {}
-    const expiresAt = Date.now() + 60 * 60 * 1000; // 60 minutes expiry
-    sessionStorage.setItem(
-      "signupData",
-      JSON.stringify({
-        // role: selectedRole,
-        // name: data.name,
-        email: data.email,
-        // username: data.username,
-        expiresAt,
-      })
-    );
+      const reservationExpiresAt = Date.now() + 60 * 60 * 1000; // 60 minutes expiry
+      sessionStorage.setItem(
+        "signupData",
+        JSON.stringify({
+          // role: selectedRole,
+          // name: data.name,
+          email: data.email,
+          // username: data.username,
+          reservationExpiresAt,
+        })
+      );
 
-    router.push("/verify-otp");
+      router.push("/verify-otp");
+    } catch (error: any) {
+      console.error("Error during signup:", error);
+      if (error?.response?.status === 409) {
+        setUsernameStatus("taken");
+      } else if (error?.response?.status === 500) {
+        console.log(error?.response?.data?.message);
+      } else if (error?.response?.redirectTo) {
+        sessionStorage.removeItem("signupData");
+        router.push(error?.response?.data?.redirectTo);
+      }
+    }
   };
 
   return (
@@ -314,6 +323,7 @@ export default function SignupPage() {
             !selectedRole ||
             usernameStatus === "taken" ||
             usernameStatus === "checking" ||
+            // !usernameValidation.success ||
             isSubmitting
           }
         >
