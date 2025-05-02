@@ -102,7 +102,7 @@ export default function SignupPage() {
   }
 
   const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
-    console.log("Submitting form with data:", data);
+    // console.log("Submitting form with data:", data);
 
     try {
       await axios.post(
@@ -123,16 +123,16 @@ export default function SignupPage() {
         })
       );
 
-      router.push("/verify-otp");
+      router.replace("/verify-otp");
     } catch (error: any) {
       console.error("Error during signup:", error);
       if (error?.response?.status === 409) {
         setUsernameStatus("taken");
       } else if (error?.response?.status === 500) {
         console.log(error?.response?.data?.message);
-      } else if (error?.response?.redirectTo) {
+      } else if (error?.response?.data?.redirectTo) {
         sessionStorage.removeItem("signupData");
-        router.push(error?.response?.data?.redirectTo);
+        router.replace(error.response.data.redirectTo);
       }
     }
   };

@@ -18,7 +18,7 @@ import { z } from "zod";
 export default function VerifyOtpPage() {
   const router = useRouter();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [email, setEmail] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState("");
@@ -32,32 +32,39 @@ export default function VerifyOtpPage() {
     resolver: zodResolver(verifySchema),
   });
   useEffect(() => {
-    const signupData = sessionStorage.getItem("signupData");
-    if (!signupData) {
-      router.replace("/signup");
-      return;
-    }
-    const { reservationExpiresAt, email } = JSON.parse(signupData);
-    console.log(JSON.parse(signupData));
-    if (Date.now() > reservationExpiresAt) {
+    try {
+      const signupData = sessionStorage.getItem("signupData");
+      if (!signupData) {
+        router.replace("/signup");
+        return;
+      }
+      const { reservationExpiresAt, email } = JSON.parse(signupData);
+      // console.log(email, "this is email");
+      if (Date.now() > reservationExpiresAt) {
+        sessionStorage.removeItem("signupData");
+        router.replace("/signup");
+        return;
+      }
+      setUserEmail(email);
+
+      const lastOtpSentAt = sessionStorage.getItem("lastOtpSentAt");
+      const now = Date.now();
+
+      if (lastOtpSentAt) {
+        const timeElapsed = Math.floor((now - parseInt(lastOtpSentAt)) / 1000);
+        const remaining = 60 - timeElapsed;
+        if (remaining > 0) {
+          setCountdown(remaining);
+        } else {
+          requestOtp(email); // expired, send a new OTP
+        }
+      } else {
+        requestOtp(email); // no record, send OTP
+      }
+    } catch (error) {
+      console.log(error, "iin verfy ue");
       sessionStorage.removeItem("signupData");
       router.replace("/signup");
-      return;
-    }
-    setEmail(email);
-
-    const lastOtpSentAt = sessionStorage.getItem("lastOtpSentAt");
-    const now = Date.now();
-
-    if (lastOtpSentAt) {
-      const timeElapsed = Math.floor((now - parseInt(lastOtpSentAt)) / 1000);
-      const remaining = 60 - timeElapsed;
-      setCountdown(remaining > 0 ? remaining : 0);
-    } else {
-      // setTimeout(() => {
-      requestOtp();
-      // }, 2000);
-      // send if no OTP was sent earlier
     }
   }, []);
 
@@ -69,11 +76,12 @@ export default function VerifyOtpPage() {
     }
   }, [countdown]);
 
-  const requestOtp = async () => {
+  const requestOtp = async (emailToUse: string) => {
     try {
+      console.log(emailToUse, "drrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr");
       await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/request-otp`,
-        { email },
+        { email: emailToUse },
         {
           headers: {
             "Content-Type": "application/json",
@@ -148,7 +156,7 @@ export default function VerifyOtpPage() {
     if (/^\d{6}$/.test(pastedData)) {
       const newOtp = pastedData.split("");
       setOtp(newOtp);
-
+      setValue("otp", newOtp.join(""));
       // Focus the last input
       const lastInput = document.getElementById(`otp-5`);
       if (lastInput) {
@@ -165,10 +173,14 @@ export default function VerifyOtpPage() {
       await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/verify-otp`,
         {
-          email,
+          email: userEmail,
           otp: data.otp,
+        },
+        {
+          withCredentials: true, // Include credentials in the request
         }
       );
+      router.replace("/dashboard");
     } catch (error: any) {
       console.error(error);
       if (error.response?.data?.redirectTo) {
@@ -196,7 +208,7 @@ export default function VerifyOtpPage() {
           <h1 className="text-2xl font-bold">Verify Your Account</h1>
           <p className="text-muted-foreground mt-2">
             We've sent a 6-digit verification code to{" "}
-            <span className="font-medium text-foreground">{email}</span>
+            <span className="font-medium text-foreground">{userEmail}</span>
           </p>
         </div>
 
@@ -253,7 +265,9 @@ export default function VerifyOtpPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={requestOtp}
+                  onClick={() => {
+                    requestOtp(userEmail);
+                  }}
                   className="text-purple-400 hover:text-purple-300"
                 >
                   Resend Code

@@ -45,6 +45,12 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       required: [true, "Username is required"],
     },
+    phone: {
+      type: Number,
+      unique: true,
+      sparse: true, // Allows multiple null values
+      match: [/^\d{10}$/, "Phone number must be 10 digits"],
+    },
     password: {
       type: String,
       // required: [true, "Password is required"],
@@ -91,7 +97,7 @@ const UserSchema = new Schema<IUser>(
       min: 100000,
       max: 999999,
     },
-    lastOtpSentAt :Date,
+    lastOtpSentAt: Date,
 
     //   managerDetails: {
     //     managedInfluencers: [{ type: Schema.Types.ObjectId, ref: "User" }],

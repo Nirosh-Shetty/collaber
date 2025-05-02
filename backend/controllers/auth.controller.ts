@@ -5,52 +5,6 @@ import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 import { mailer } from "../utils/mailer";
 // import { apiResponse } from "../types/apiResponse";
-
-export const signIn = async (req: Request, res: Response): Promise<any> => {
-  const { identifier, password } = req.body;
-
-  try {
-    const user = await UserModel.findOne({
-      $or: [
-        { email: identifier },
-        { username: identifier },
-        { phoneNumber: identifier },
-      ],
-    }).lean();
-    if (!user) {
-      return res.status(401).json({ message: "User not Found" });
-    }
-    if (user.authProvider !== "local") {
-      return res.status(401).json({ message: "User not Found in local" });
-    }
-    const isPasswordCorrect = await bcryptjs.compare(password, user.password);
-    if (!isPasswordCorrect) {
-      return res.status(401).json({ message: "Incorrect password" });
-    }
-
-    const token = generateToken(user._id.toString(), user.role);
-
-    res.cookie("auth_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
-      sameSite: "strict",
-    });
-
-    return res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        username: user.username,
-        role: user.role,
-      },
-      token,
-    });
-  } catch (error) {
-    return res.status(500).json({ message: "Error logging in", error });
-  }
-};
-//i gotta ask chatgpt: i tried this . help m eto correct it  also ask regardinmg th otp thing if user tries to signup and then goes to verofy and closes it and then tries to open signup within 60 sec but user can get the another otp again even before 60 sec
 export const signUp = async (req: Request, res: Response): Promise<any> => {
   const { name, email, username, password, role } = req.body;
 
@@ -77,7 +31,7 @@ export const signUp = async (req: Request, res: Response): Promise<any> => {
       existingUser.reservationExpiresAt &&
       existingUser.reservationExpiresAt > new Date()
     ) {
-      return res.status(400).json({
+      return res.status(201).json({
         message:
           "A signup is already in progress for this email. Please verify your email to continue.",
         redirectTo: "/verify-otp",
@@ -90,11 +44,12 @@ export const signUp = async (req: Request, res: Response): Promise<any> => {
     }
 
     // ✅ Now create a new temp user
-    const user = await UserModel.create({
+    const hashedPass = await bcryptjs.hash(password, 10);
+    await UserModel.create({
       name,
       email,
       username,
-      password,
+      password: hashedPass,
       role,
       authProvider: "local",
       isVerified: false,
@@ -105,65 +60,66 @@ export const signUp = async (req: Request, res: Response): Promise<any> => {
       ),
     });
 
-    // 🚀 Optional: Trigger OTP email here or after “Continue to verify”
-    // await sendOtpEmail(user.email, user.otp);
-
     return res.status(201).json({
       message: "User Created Successfully",
     });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ message: "Error creating user", error });
   }
 };
-
-export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
-  const { email, otp } = req.body;
+export const signIn = async (req: Request, res: Response): Promise<any> => {
+  const { identifier, password } = req.body;
+  console.log(req.body);
 
   try {
-    const user = await UserModel.findOne({ email });
-    if (!user)
-      return res
-        .status(400)
-        .json({ message: "User not found", redirectTo: "/signup" });
-
-    if (user.isVerified)
-      return res
-        .status(400)
-        .json({ message: "User is already verified", redirectTo: "/signin" });
-
-    if (user.reservationExpiresAt && user.reservationExpiresAt < new Date())
-      return res
-        .status(400)
-        .json({ message: "Reservation expired", redirectTo: "/signup" });
-
-    if (user.otp !== otp)
-      return res.status(400).json({ message: "Invalid OTP" });
-
-    user.isVerified = true;
-    user.otp = undefined; // Clear OTP after verification
-    user.isTempAccount = false; // Mark account as permanent
-    user.reservationExpiresAt = undefined;
-
-    await user.save();
+    const user = await UserModel.findOne({
+      $or: [
+        { email: identifier },
+        { username: identifier },
+        { phoneNumber: identifier },
+      ],
+    }).lean();
+    if (!user) {
+      return res.status(401).json({ message: "User not Found" });
+    }
+    if (user.authProvider !== "local") {
+      return res.status(401).json({ message: "User not Found in local" });
+    }
+    const isPasswordCorrect = await bcryptjs.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
 
     const token = generateToken(user._id.toString(), user.role);
+    //TODO: add "remember me" feature in the frtonend
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
-      sameSite: "lax",
+      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
+      sameSite: "strict",
     });
-    return res.status(500).json({ message: "Verified Successfully" });
+
+    return res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        username: user.username,
+        role: user.role,
+      },
+      // token,
+      message: "user signin in successfully",
+    });
   } catch (error) {
-    console.error(error); // log internally
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Error logging in", error });
   }
 };
 
 export const requestOtp = async (req: Request, res: Response): Promise<any> => {
+  //TODO: rate limit otp request per hour/day
   try {
     const { email } = req.body;
-    console.log(req.body, "sfnsdkjfnsdfjks");
+    // console.log(req.body, "sfnsdkjfnsdfjks");
     if (!email) {
       return res
         .status(400)
@@ -213,7 +169,12 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     // Save OTP to the user record
     await UserModel.updateOne(
       { email },
-      { $set: { otp, lastOtpSentAt: Date.now() } }
+      {
+        $set: {
+          otp,
+          lastOtpSentAt: new Date(),
+        },
+      }
     );
 
     return res.status(200).json({
@@ -222,6 +183,51 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
   } catch (error) {
     console.log(error, "this is error in sendOtpEmail function");
     return res.status(500).json({ message: "Error sending OTP" });
+  }
+};
+export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
+  const { email, otp } = req.body;
+
+  try {
+    const user = await UserModel.findOne({ email });
+    if (!user)
+      return res
+        .status(400)
+        .json({ message: "User not found", redirectTo: "/signup" });
+
+    if (user.isVerified)
+      return res
+        .status(400)
+        .json({ message: "User is already verified", redirectTo: "/signin" });
+
+    if (user.reservationExpiresAt && user.reservationExpiresAt < new Date())
+      return res
+        .status(400)
+        .json({ message: "Reservation expired", redirectTo: "/signup" });
+
+    // if (user.otp !== otp)
+    //TODO: chanhe this during production
+    if ("111111" !== otp)
+      return res.status(400).json({ message: "Invalid OTP" });
+
+    user.isVerified = true;
+    user.otp = undefined; // Clear OTP after verification
+    user.isTempAccount = false; // Mark account as permanent
+    user.reservationExpiresAt = undefined;
+
+    await user.save();
+
+    const token = generateToken(user._id.toString(), user.role);
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
+      sameSite: "lax",
+    });
+    return res.status(201).json({ message: "Verified Successfully" });
+  } catch (error) {
+    console.error(error); // log internally
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

@@ -91,6 +91,7 @@ export const mailer = async (
       message: "Verification code sent to your Email",
     };
   } catch (error: any) {
+    console.error(error, "mailer");
     return {
       success: false,
       message: `Unable to send Verification code: ${error.message}`,

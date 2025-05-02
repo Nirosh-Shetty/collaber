@@ -5,6 +5,7 @@ export interface IUser extends Document {
   name: string;
   username: string;
   email: string;
+  phone: number;
   password: string;
   role: "influencer" | "brand" | "manager";
   profilePicture?: string;
