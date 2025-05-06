@@ -26,7 +26,6 @@ export default function VerifyOtpPage() {
   const {
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<z.infer<typeof verifySchema>>({
     resolver: zodResolver(verifySchema),
@@ -92,14 +91,14 @@ export default function VerifyOtpPage() {
       sessionStorage.setItem("lastOtpSentAt", Date.now().toString());
       setOtp(["", "", "", "", "", ""]);
       // console.log(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log(error);
-      if (error.response?.data?.redirectTo) {
+      if (axios.isAxiosError(error) && error.response?.data?.redirectTo) {
         sessionStorage.removeItem("signupData");
         sessionStorage.removeItem("lastOtpSentAt");
         router.replace(error.response.data.redirectTo);
       }
-      if (error.response?.data?.lastOtpSentAt) {
+      if (axios.isAxiosError(error) && error.response?.data?.lastOtpSentAt) {
         const timeElapsed = Math.floor(
           (Date.now() - new Date(error.response.data.lastOtpSentAt).getTime()) /
             1000
@@ -111,8 +110,12 @@ export default function VerifyOtpPage() {
           error.response.data.lastOtpSentAt?.toString()
         );
       }
-      setError(error.response?.data?.message || "failed to send OTP");
-      if (error.response?.status === 500) setCountdown(0);
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || "failed to send OTP");
+        if (error.response?.status === 500) setCountdown(0);
+      } else {
+        setError("An unexpected error occurred");
+      }
     }
   };
   // Handle OTP input change
@@ -181,13 +184,17 @@ export default function VerifyOtpPage() {
         }
       );
       router.replace("/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      if (error.response?.data?.redirectTo) {
+      if (axios.isAxiosError(error) && error.response?.data?.redirectTo) {
         sessionStorage.removeItem("signupData");
         sessionStorage.removeItem("lastOtpSentAt");
         router.replace(error.response.data.redirectTo);
-      } else setError(error.response?.data?.message || "verification failed");
+      } else if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || "verification failed");
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -207,7 +214,7 @@ export default function VerifyOtpPage() {
         <div>
           <h1 className="text-2xl font-bold">Verify Your Account</h1>
           <p className="text-muted-foreground mt-2">
-            We've sent a 6-digit verification code to{" "}
+            We&#39;ve sent a 6-digit verification code to
             <span className="font-medium text-foreground">{userEmail}</span>
           </p>
         </div>
@@ -259,7 +266,7 @@ export default function VerifyOtpPage() {
           </form>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              Didn't receive the code?{" "}
+              Didn&#39;t receive the code?
               {countdown > 0 ? (
                 <span>Resend in {countdown}s</span>
               ) : (

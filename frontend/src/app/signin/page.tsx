@@ -17,7 +17,11 @@ import axios from "axios";
 
 export default function SigninPage() {
   const router = useRouter();
-  const { register, handleSubmit } = useForm<z.infer<typeof signInSchema>>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
       identifier: "",
@@ -39,18 +43,15 @@ export default function SigninPage() {
           withCredentials: true, // Include credentials in the request
         }
       );
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } catch (error: any) {
-      // Check if error has a response
       if (error.response) {
-        // Log the actual message from the backend
         console.error(
           "Error signing in:",
           error.response.data.message || error.response.data
         );
-        alert(
-          error.response.data.message || "Error signing in. Please try again."
-        );
+        if (error.response?.data?.redirectTo)
+          router.replace(error.response?.data?.redirectTo);
       } else {
         console.error("Error signing in:", error.message);
         alert("Error signing in. Please try again.");
@@ -81,10 +82,16 @@ export default function SigninPage() {
               required
               {...register("identifier")}
             />
-            <p className="text-xs text-muted-foreground">
-              Enter the email, phone number, or username associated with your
-              account.
-            </p>
+            {errors?.identifier ? (
+              <p className="text-xs text-red-400">
+                {errors?.identifier?.message}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Enter the email, phone number, or username associated with your
+                account.
+              </p>
+            )}
           </div>
 
           {/* Password */}
@@ -105,10 +112,16 @@ export default function SigninPage() {
               required
               {...register("password")}
             />
-            <p className="text-xs text-muted-foreground">
-              Your password must be at least 8 characters long and include
-              letters, numbers, and special characters.
-            </p>
+            {errors?.password ? (
+              <p className="text-xs text-red-400">
+                {errors?.password?.message}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Your password must be at least 8 characters long and include
+                letters, numbers, and special characters.
+              </p>
+            )}
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
@@ -183,7 +196,7 @@ export default function SigninPage() {
         </div>
 
         <p className="text-center text-sm">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
             href="/signup"
             className="text-purple-400 hover:text-purple-300"

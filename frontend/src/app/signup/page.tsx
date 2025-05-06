@@ -72,6 +72,7 @@ export default function SignupPage() {
 
     return () => clearTimeout(timer);
   }, [username]);
+
   useEffect(() => {
     sessionStorage.removeItem("signupData");
   }, []);
@@ -89,7 +90,7 @@ export default function SignupPage() {
       if (res?.data?.availability === "taken") {
         setUsernameSuggestions(res?.data?.suggestions);
       }
-    } catch (err) {
+    } catch {
       console.error("Failed to check username availability");
       setUsernameStatus("idle");
     }
@@ -124,13 +125,16 @@ export default function SignupPage() {
       );
 
       router.replace("/verify-otp");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error during signup:", error);
-      if (error?.response?.status === 409) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
         setUsernameStatus("taken");
-      } else if (error?.response?.status === 500) {
+      } else if (axios.isAxiosError(error) && error.response?.status === 500) {
         console.log(error?.response?.data?.message);
-      } else if (error?.response?.data?.redirectTo) {
+      } else if (
+        axios.isAxiosError(error) &&
+        error.response?.data?.redirectTo
+      ) {
         sessionStorage.removeItem("signupData");
         router.replace(error.response.data.redirectTo);
       }
@@ -210,7 +214,7 @@ export default function SignupPage() {
             <p className="text-xs text-red-400">{errors?.email?.message}</p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              We'll use this to verify your account and for important
+              We&#39;ll use this to verify your account and for important
               notifications.
             </p>
           )}
