@@ -84,7 +84,19 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
       return res.status(401).json({ message: "User not Found" });
     }
     if (user.authProvider !== "local") {
-      return res.status(401).json({ message: "User not Found in local" });
+      return res.status(401).json({ message: "User not Found" });
+    }
+    if (!user.isVerified && user.isTempAccount) {
+      if (user.reservationExpiresAt && user.reservationExpiresAt > new Date())
+        return res.status(401).json({
+          message: "User not verified. Continue to verify the account",
+          redirectTo: "/verify-otp",
+        });
+      else
+        return res.status(401).json({
+          message: "Reservation expired. You need to signup again",
+          redirectTo: "/signup",
+        });
     }
     const isPasswordCorrect = await bcryptjs.compare(password, user.password);
     if (!isPasswordCorrect) {
@@ -121,30 +133,34 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     const { email } = req.body;
     // console.log(req.body, "sfnsdkjfnsdfjks");
     if (!email) {
-      return res
-        .status(400)
-        .json({ message: "Email is required", redirectTo: "/signup" });
+      return res.status(400).json({
+        message: "Cannot find the email. Please signup again.",
+        redirectTo: "/signup",
+      });
     }
     // Check if the user exists and is a temp account
     const user = await UserModel.findOne({ email }).lean();
     if (!user) {
-      return res
-        .status(400)
-        .json({ message: "User not found", redirectTo: "/signup" });
+      return res.status(400).json({
+        message: "User not found. You need to signup again",
+        redirectTo: "/signup",
+      });
     }
     if (user.isVerified && !user.isTempAccount) {
-      return res
-        .status(400)
-        .json({ message: "User is already verified", redirectTo: "/login" });
+      return res.status(400).json({
+        message: "User is already verified. You can  signin directly",
+        redirectTo: "/login",
+      });
     }
     if (
       user.isTempAccount &&
       user.reservationExpiresAt &&
       user.reservationExpiresAt < new Date()
     ) {
-      return res
-        .status(400)
-        .json({ message: "Reservation expired", redirectTo: "/signup" });
+      return res.status(400).json({
+        message: "Reservation expired. You need to signup again",
+        redirectTo: "/signup",
+      });
     }
 
     if (
