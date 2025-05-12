@@ -1,9 +1,13 @@
-import React from 'react'
+import { PopUpCard } from "@/components/PopUpCard";
+import React from "react";
 
 const page = () => {
   return (
-    <div>page</div>
-  )
-}
+    <div>
+      page
+      <PopUpCard />
+    </div>
+  );
+};
 
-export default page
+export default page;

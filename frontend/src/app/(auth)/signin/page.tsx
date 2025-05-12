@@ -21,6 +21,7 @@ export default function SigninPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setError,
   } = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -29,7 +30,7 @@ export default function SigninPage() {
     },
   });
   const [isLoading, setIsLoading] = useState(false);
-
+  // const [errorFromServerSide, setErrorFromServerSide] = useState()
   const handleSignIn = async (data: z.infer<typeof signInSchema>) => {
     setIsLoading(true);
     try {
@@ -50,8 +51,27 @@ export default function SigninPage() {
           "Error signing in:",
           error.response.data.message || error.response.data
         );
-        if (error.response?.data?.redirectTo)
+
+        // Dynamically set the error in react-hook-form based on server error
+        if (error.response?.data?.errorIn === "identifier") {
+          setError("identifier", {
+            type: "manual",
+            message: error.response?.data?.message,
+          });
+        } else if (error.response?.data?.errorIn === "password") {
+          setError("password", {
+            type: "manual",
+            message: error.response?.data?.message,
+          });
+        }
+        // If the error contains a "redirectTo" key, navigate accordingly
+        if (error.response?.data?.redirectTo) {
           router.replace(error.response?.data?.redirectTo);
+        }
+        // else {
+        //   // You can add more error handling logic as needed
+        //   alert("Error signing in. Please try again.");
+        // }
       } else {
         console.error("Error signing in:", error.message);
         alert("Error signing in. Please try again.");

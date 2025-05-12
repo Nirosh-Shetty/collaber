@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import {
   CheckIcon,
   XIcon,
   LoaderIcon,
+  ArrowLeftIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { signUpSchema, usernameSchema } from "@/schemas/signUp.schema";
@@ -20,14 +21,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import axios from "axios";
-const roles = [
-  { label: "Influencer", value: "influencer", Icon: UserIcon },
-  { label: "Brand", value: "brand", Icon: BuildingIcon },
-  { label: "Manager", value: "manager", Icon: BriefcaseIcon },
-] as const;
+// const roles = [
+//   { label: "Influencer", value: "influencer", Icon: UserIcon },
+//   { label: "Brand", value: "brand", Icon: BuildingIcon },
+//   { label: "Manager", value: "manager", Icon: BriefcaseIcon },
+// ] as const;
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [usernameStatus, setUsernameStatus] = useState<
     "idle" | "checking" | "available" | "taken" | "reserved"
   >("idle");
@@ -42,6 +44,7 @@ export default function SignupPage() {
     // setError,
     getValues,
     formState: { isSubmitting, errors },
+    setError,
   } = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
     // defaultValues: {
@@ -53,15 +56,43 @@ export default function SignupPage() {
   });
 
   const selectedRole = watch("role");
+
   // const username = watch("username");
   const username = useWatch({ control, name: "username" });
-
   // Debounce Username Check
   const usernameValidation = usernameSchema.safeParse(username);
   const lastCheckedUsername = useRef<string | null>(null);
+
+  const checkUsernameAvailability = useCallback(
+    async (username: string) => {
+      setUsernameStatus("checking");
+      lastCheckedUsername.current = username;
+      try {
+        // simulate server request
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const res = await axios.post(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/check-username-unique`,
+          { username, email: getValues("email") }
+        );
+        setUsernameStatus(res?.data?.availability);
+        if (res?.data?.availability === "taken") {
+          setUsernameSuggestions(res?.data?.suggestions);
+        }
+      } catch (error: any) {
+        console.error("Failed to check username availability");
+        setUsernameStatus("idle");
+        setError("username", {
+          type: "manual",
+          message: error.response?.data?.message,
+        });
+      }
+    },
+    [getValues]
+  );
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!username || !usernameValidation.success) {
+      if (!username?.trim() || !usernameValidation.success) {
         setUsernameStatus("idle");
         setUsernameSuggestions([]);
         return;
@@ -71,30 +102,18 @@ export default function SignupPage() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [username]);
+  }, [username, usernameValidation.success, checkUsernameAvailability]);
 
+  const role = searchParams.get("role");
   useEffect(() => {
+    // const role = sessionStorage.getItem("selectedRole");
     sessionStorage.removeItem("signupData");
-  }, []);
-  async function checkUsernameAvailability(username: string) {
-    setUsernameStatus("checking");
-    lastCheckedUsername.current = username;
-    try {
-      // simulate server request
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/check-username-unique`,
-        { username, email: getValues("email") }
-      );
-      setUsernameStatus(res?.data?.availability);
-      if (res?.data?.availability === "taken") {
-        setUsernameSuggestions(res?.data?.suggestions);
-      }
-    } catch {
-      console.error("Failed to check username availability");
-      setUsernameStatus("idle");
+    if (!role) {
+      router.replace("/signup/select-role");
+    } else {
+      setValue("role", role as "influencer" | "brand" | "manager");
     }
-  }
+  }, [role, router, setValue]);
 
   function selectSuggestion(suggestion: string) {
     setValue("username", suggestion);
@@ -107,7 +126,7 @@ export default function SignupPage() {
 
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup/basic-info`,
         {
           ...data,
         }
@@ -124,7 +143,7 @@ export default function SignupPage() {
         })
       );
 
-      router.replace("/verify-otp");
+      router.replace("/signup/verify-otp");
     } catch (error: unknown) {
       console.error("Error during signup:", error);
       if (axios.isAxiosError(error) && error.response?.status === 409) {
@@ -141,36 +160,69 @@ export default function SignupPage() {
     }
   };
 
+  const getRoleIcon = () => {
+    switch (selectedRole) {
+      case "influencer":
+        return <UserIcon className="h-5 w-5" />;
+      case "brand":
+        return <BuildingIcon className="h-5 w-5" />;
+      case "manager":
+        return <BriefcaseIcon className="h-5 w-5" />;
+      default:
+        return null;
+    }
+  };
+
+  const getRoleLabel = () => {
+    switch (selectedRole) {
+      case "influencer":
+        return "Influencer";
+      case "brand":
+        return "Brand";
+      case "manager":
+        return "Manager";
+      default:
+        return "Unknown";
+    }
+  };
   return (
     <div className="container max-w-md mx-auto py-10 px-4 space-y-6">
+      <Link
+        href="/signup/select-role"
+        className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeftIcon className="mr-2 h-4 w-4" />
+        Back to role selection
+      </Link>
+
       <div>
-        <h1 className="text-2xl font-bold">Create Account</h1>
-        <p className="text-muted-foreground">
-          Select your role to get started.
+        <div className="flex items-center mb-2">
+          <div className="bg-purple-600 text-white text-xs font-medium rounded-full w-6 h-6 flex items-center justify-center mr-2">
+            2
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">
+            Step 2 of 2
+          </p>
+        </div>
+        <h1 className="text-2xl font-bold">Complete Your Profile</h1>
+        <p className="text-muted-foreground mt-2">
+          Enter your details to create your account.
         </p>
       </div>
 
-      {/* Role Selection */}
-      <div>
-        <Label className="text-base mb-2 block">Select Role</Label>
-        <div className="grid grid-cols-3 gap-4">
-          {roles.map(({ label, value, Icon }) => (
-            <div
-              key={value}
-              onClick={() => setValue("role", value)}
-              className={`flex flex-col items-center justify-center p-4 rounded-lg border cursor-pointer transition-all
-                ${
-                  selectedRole === value
-                    ? "border-purple-600 bg-purple-950/20"
-                    : "border-gray-700 bg-gray-900"
-                }`}
-            >
-              <Icon className="h-6 w-6 mb-2" />
-              <span className="text-sm">{label}</span>
-            </div>
-          ))}
+      {selectedRole && (
+        <div className="flex items-center p-3 rounded-lg bg-purple-950/20 border border-purple-600">
+          <div className="h-8 w-8 rounded-full bg-purple-950/50 flex items-center justify-center mr-3">
+            {getRoleIcon()}
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">
+              You&#39;re creating an account as a
+            </p>
+            <p className="font-medium">{getRoleLabel()}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Form */}
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
@@ -275,6 +327,9 @@ export default function SignupPage() {
               {/* <p className="text-xs text-red-400 mb-2">
                 This username is already taken. Try one:
               </p> */}
+              <p className="text-sm text-muted-foreground mb-1">
+                Try one of these:
+              </p>
               <div className="flex flex-wrap gap-2">
                 {usernameSuggestions.map((suggestion) => (
                   <button

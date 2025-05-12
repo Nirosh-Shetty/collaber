@@ -4,7 +4,7 @@ import {
   requestOtp,
   signIn,
   signout,
-  signUp,
+  signUpBasicInfo,
   verifyOtp,
 } from "../controllers/auth.controller";
 import { generateToken } from "../utils/generateToken";
@@ -13,7 +13,7 @@ import { checkUsernameUnique } from "../controllers/checkUsernameUnique.controll
 const authRouter = express.Router();
 
 authRouter.post("/signin", signIn);
-authRouter.post("/signup", signUp);
+authRouter.post("/signup", signUpBasicInfo);
 
 authRouter.get("/google", (req, res, next): any => {
   const { role } = req.query;
@@ -30,7 +30,7 @@ authRouter.get("/google", (req, res, next): any => {
 authRouter.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${process.env.FRONTEND_URL}/dashboard`,
+    failureRedirect: `${process.env.FRONTEND_URL}/signup/select-role`,
     session: false,
   }),
   async (req: Request, res: Response): Promise<void> => {
@@ -92,8 +92,10 @@ authRouter.get(
   }
 );
 
-authRouter.post("/request-otp", requestOtp);
-authRouter.post("/verify-otp", verifyOtp);
+authRouter.post("/signup/basic-info", signUpBasicInfo);
+//TODO: change the url and controller name. give a signup related name like above
+authRouter.post("/signup/request-otp", requestOtp);
+authRouter.post("/signup/verify-otp", verifyOtp);
 
 // POST /api/auth/signout
 authRouter.post("/signout", signout);

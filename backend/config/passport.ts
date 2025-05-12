@@ -16,7 +16,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: "http://localhost:8000/api/auth/google/callback",
+      callbackURL: `${process.env.BACKEND_URL}/api/auth/google/callback`,
       passReqToCallback: true, // Required to access req in callback
     },
     async (
@@ -87,7 +87,7 @@ passport.use(
     {
       clientID: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-      callbackURL: "http://localhost:8000/api/auth/facebook/callback",
+      callbackURL: `${process.env.BACKEND_URL}/api/auth/facebook/callback`,
       profileFields: ["id", "emails", "name", "picture.type(large)"],
       passReqToCallback: true, // enable req access in verify callback
     },

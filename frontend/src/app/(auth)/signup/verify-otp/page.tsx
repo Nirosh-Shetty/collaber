@@ -34,14 +34,14 @@ export default function VerifyOtpPage() {
     try {
       const signupData = sessionStorage.getItem("signupData");
       if (!signupData) {
-        router.replace("/signup");
+        router.replace("/signup/select-role");
         return;
       }
       const { reservationExpiresAt, email } = JSON.parse(signupData);
       // console.log(email, "this is email");
       if (Date.now() > reservationExpiresAt) {
         sessionStorage.removeItem("signupData");
-        router.replace("/signup");
+        router.replace("/signup/select-role");
         return;
       }
       setUserEmail(email);
@@ -63,7 +63,7 @@ export default function VerifyOtpPage() {
     } catch (error) {
       console.log(error, "iin verfy ue");
       sessionStorage.removeItem("signupData");
-      router.replace("/signup");
+      router.replace("/signup/select-role");
     }
   }, []);
 
@@ -77,9 +77,8 @@ export default function VerifyOtpPage() {
 
   const requestOtp = async (emailToUse: string) => {
     try {
-      console.log(emailToUse, "drrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr");
       await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/request-otp`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup/request-otp`,
         { email: emailToUse },
         {
           headers: {
@@ -174,7 +173,7 @@ export default function VerifyOtpPage() {
     setError("");
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/verify-otp`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup/verify-otp`,
         {
           email: userEmail,
           otp: data.otp,
@@ -204,7 +203,7 @@ export default function VerifyOtpPage() {
     <div className="container max-w-md mx-auto py-10 px-4">
       <div className="space-y-6">
         <Link
-          href="/signup"
+          href="/signup/select-role"
           className="flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeftIcon className="mr-2 h-4 w-4" />

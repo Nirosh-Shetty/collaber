@@ -11,7 +11,7 @@ export function middleware(req: NextRequest) {
   }
 
   // Logged in and trying to access signin/signup => redirect to dashboard
-  if (token && (pathname === "/signin" || pathname === "/signup")) {
+  if (token && (pathname === "/signin" || pathname === "/signup/select-role")) {
     console.log("loggin alreawdy ");
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
@@ -20,5 +20,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/signin", "/signup"],
+  matcher: ["/dashboard/:path*", "/signin", "/signup/:path*"],
 };

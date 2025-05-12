@@ -5,7 +5,10 @@ import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 import { mailer } from "../utils/mailer";
 // import { apiResponse } from "../types/apiResponse";
-export const signUp = async (req: Request, res: Response): Promise<any> => {
+export const signUpBasicInfo = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   const { name, email, username, password, role } = req.body;
 
   try {
@@ -34,7 +37,7 @@ export const signUp = async (req: Request, res: Response): Promise<any> => {
       return res.status(201).json({
         message:
           "A signup is already in progress for this email. Please verify your email to continue.",
-        redirectTo: "/verify-otp",
+        redirectTo: "/signup/verify-otp",
       });
     }
 
@@ -44,7 +47,13 @@ export const signUp = async (req: Request, res: Response): Promise<any> => {
     }
 
     // ✅ Now create a new temp user
+    const loginEvent = {
+      ip: req.ip || "unknown",
+      userAgent: req.get("User-Agent") || "unknown",
+      time: new Date(),
+    };
     const hashedPass = await bcryptjs.hash(password, 10);
+
     await UserModel.create({
       name,
       email,
@@ -58,6 +67,8 @@ export const signUp = async (req: Request, res: Response): Promise<any> => {
         Date.now() +
           (Number(process.env.USER_RESERVATION_EXPIRY_MS) || 60 * 60 * 1000)
       ),
+      //TODO: login history is not working
+      loginHistory: [loginEvent],
     });
 
     return res.status(201).json({
@@ -70,7 +81,6 @@ export const signUp = async (req: Request, res: Response): Promise<any> => {
 };
 export const signIn = async (req: Request, res: Response): Promise<any> => {
   const { identifier, password } = req.body;
-  console.log(req.body);
 
   try {
     const user = await UserModel.findOne({
@@ -79,30 +89,62 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
         { username: identifier },
         { phoneNumber: identifier },
       ],
-    }).lean();
+    }).select("+password");
+    // .lean();
     if (!user) {
-      return res.status(401).json({ message: "User not Found" });
+      return res
+        .status(401)
+        .json({ message: "User not Found", errorIn: "identifier" });
     }
-    if (user.authProvider !== "local") {
-      return res.status(401).json({ message: "User not Found" });
+    if (!user || user.authProvider !== "local") {
+      return res
+        .status(401)
+        .json({ message: "Invalid credentials", errorIn: "identifier" });
     }
-    if (!user.isVerified && user.isTempAccount) {
-      if (user.reservationExpiresAt && user.reservationExpiresAt > new Date())
-        return res.status(401).json({
-          message: "User not verified. Continue to verify the account",
-          redirectTo: "/verify-otp",
-        });
-      else
-        return res.status(401).json({
-          message: "Reservation expired. You need to signup again",
-          redirectTo: "/signup",
-        });
+
+    // if (!user.isVerified && user.isTempAccount) {
+    //   if (user.reservationExpiresAt && user.reservationExpiresAt > new Date())
+    //     return res.status(401).json({
+    //       message: "User not verified. Continue to verify the account",
+    //       redirectTo: "/signup/verify-otp",
+    //     });
+    //   else
+    //     return res.status(401).json({
+    //       message: "Reservation expired. You need to signup again",
+    //       redirectTo: "/signup/basic-info",
+    //     });
+    // }
+    //instead
+    if (!user.isVerified && user.isTempAccount && user.reservationExpiresAt) {
+      return res.status(401).json({
+        message: "Account verification required or session expired",
+        redirectTo:
+          user.reservationExpiresAt > new Date()
+            ? "/signup/verify-otp"
+            : "/signup/basic-info",
+        errorIn: "identifier",
+      });
     }
     const isPasswordCorrect = await bcryptjs.compare(password, user.password);
     if (!isPasswordCorrect) {
-      return res.status(401).json({ message: "Incorrect password" });
+      return res
+        .status(401)
+        .json({ message: "Incorrect password", errorIn: "password" });
     }
 
+    const loginEvent = {
+      ip: req.ip || "unknown",
+      userAgent: req.get("User-Agent") || "unknown",
+      time: new Date(),
+    };
+    user.loginHistory.unshift(loginEvent);
+
+    // Keep only the latest 5 entries
+    if (user.loginHistory.length > 5) {
+      user.loginHistory = user.loginHistory.slice(0, 5);
+    }
+
+    await user.save();
     const token = generateToken(user._id.toString(), user.role);
     //TODO: add "remember me" feature in the frtonend
     res.cookie("auth_token", token, {
@@ -135,7 +177,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     if (!email) {
       return res.status(400).json({
         message: "Cannot find the email. Please signup again.",
-        redirectTo: "/signup",
+        redirectTo: "/signup/basic-info",
       });
     }
     // Check if the user exists and is a temp account
@@ -143,7 +185,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     if (!user) {
       return res.status(400).json({
         message: "User not found. You need to signup again",
-        redirectTo: "/signup",
+        redirectTo: "/signup/basic-info",
       });
     }
     if (user.isVerified && !user.isTempAccount) {
@@ -159,7 +201,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     ) {
       return res.status(400).json({
         message: "Reservation expired. You need to signup again",
-        redirectTo: "/signup",
+        redirectTo: "/signup/basic-info",
       });
     }
 
@@ -209,7 +251,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     if (!user)
       return res
         .status(400)
-        .json({ message: "User not found", redirectTo: "/signup" });
+        .json({ message: "User not found", redirectTo: "/signup/basic-info" });
 
     if (user.isVerified)
       return res
@@ -217,9 +259,10 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
         .json({ message: "User is already verified", redirectTo: "/signin" });
 
     if (user.reservationExpiresAt && user.reservationExpiresAt < new Date())
-      return res
-        .status(400)
-        .json({ message: "Reservation expired", redirectTo: "/signup" });
+      return res.status(400).json({
+        message: "Reservation expired",
+        redirectTo: "/signup/basic-info",
+      });
 
     // if (user.otp !== otp)
     //TODO: chanhe this during production

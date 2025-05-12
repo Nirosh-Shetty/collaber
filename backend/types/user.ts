@@ -1,4 +1,9 @@
 import { Types, Document } from "mongoose";
+export interface LoginMetadata {
+  ip: string;
+  userAgent?: string; // Optional because some requests may not send it
+  time: Date;
+}
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -31,4 +36,5 @@ export interface IUser extends Document {
   isTempAccount?: boolean;
   otp?: string;
   lastOtpSentAt?: Date;
+  loginHistory: LoginMetadata[];
 }

@@ -1,34 +1,14 @@
 import mongoose, { Schema, model, Types, Document } from "mongoose";
 import { IUser } from "../types/user";
-// Interface for a User
-//TODO: you can make saparete folder called types to keep this IUser
-// export interface IUser extends Document {
-//   _id: Types.ObjectId; // 👈 Add this line
-//   name: string;
-//   username: string;
-//   email: string;
-//   password: string;
-//   role: "influencer" | "brand" | "manager";
-//   profilePicture?: string;
-//   rating: number;
-//   totalReviews: number;
-//   authProvider: "local" | "google" | "facebook";
-//   googleId?: string;
-//   facebookId?: string;
-//   influencerDetails?: {
-//     followers: number;
-//     niche: string;
-//     socialLinks: Map<string, string>;
-//     collaborations: Types.ObjectId[];
-//   };
-//   brandDetails?: {
-//     companyName: string;
-//     website: string;
-//     brandCategory: string;
-//     collaborations: Types.ObjectId[];
-//   };
-// }
 
+const LoginMetadataSchema = new Schema(
+  {
+    ip: { type: String, required: true },
+    userAgent: { type: String },
+    time: { type: Date, required: true, default: Date.now },
+  },
+  { _id: false } // Prevents MongoDB from creating _id for each subdocument
+);
 // Mongoose Schema
 const UserSchema = new Schema<IUser>(
   {
@@ -53,6 +33,7 @@ const UserSchema = new Schema<IUser>(
     },
     password: {
       type: String,
+      select: false,
       // required: [true, "Password is required"],
     },
     authProvider: {
@@ -102,6 +83,7 @@ const UserSchema = new Schema<IUser>(
     //   managerDetails: {
     //     managedInfluencers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     //   },
+    loginHistory: [LoginMetadataSchema], // array of login metadata
   },
   {
     timestamps: true, // Adds createdAt and updatedAt automatically

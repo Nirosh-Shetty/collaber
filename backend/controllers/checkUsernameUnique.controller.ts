@@ -8,6 +8,8 @@ export const checkUsernameUnique = async (
 ): Promise<any> => {
   try {
     const { email, username } = req.body;
+    if (!email)
+      return res.status(400).json({ message: "PLease enter your email first" });
 
     if (!username || typeof username !== "string") {
       return res
