@@ -56,6 +56,7 @@ export default function SignupPage() {
   });
 
   const selectedRole = watch("role");
+  const email = watch("email");
 
   // const username = watch("username");
   const username = useWatch({ control, name: "username" });
@@ -279,7 +280,7 @@ export default function SignupPage() {
             <Input
               id="username"
               placeholder="Choose a unique username"
-              disabled={!selectedRole}
+              disabled={!selectedRole || !!errors?.email || !(email.length > 0)}
               {...register("username")}
               onBlur={() => setUsernameTouched(true)}
               className={`pr-10 ${
@@ -308,6 +309,8 @@ export default function SignupPage() {
             <p className="text-xs text-red-400">
               {usernameValidation.error.errors[0].message}
             </p>
+          ) : errors?.username ? (
+            <p className="text-xs text-red-400">{errors?.username?.message}</p>
           ) : usernameStatus === "available" ? (
             <p className="text-xs text-green-500">Username is available!</p>
           ) : usernameStatus === "reserved" ? (
