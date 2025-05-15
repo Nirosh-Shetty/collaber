@@ -405,7 +405,7 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Socials */}
+      {/* Social */}
       <div className="grid grid-cols-2 gap-4">
         <Button
           variant="outline"
