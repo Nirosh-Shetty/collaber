@@ -7,8 +7,9 @@ import {
 import { Strategy as FacebookStrategy } from "passport-facebook";
 import UserModel from "../models/Users"; // Your user model
 import dotenv from "dotenv";
-import { Request } from "express";
+import { Request, Response as ExpressResponse } from "express";
 import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
+import sessionStore from "../utils/sessionStore";
 dotenv.config();
 
 passport.use(
@@ -42,10 +43,22 @@ passport.use(
 
         if (!user) {
           if (!role) {
-            return done(null, false, {
-              message: "Role missing during signup.",
-            });
+            // Securely store the profile info in a short-lived cookie
+            const basicProfile = {
+              name: profile.displayName,
+              email: profile.emails?.[0].value,
+              picture: profile.photos?.[0].value,
+              provider: "google",
+            };
+
+            const sessionId = await sessionStore.set(basicProfile, 5 * 60); // Store for 5 minutes
+
+            // Redirect to role selection page with session ID
+            return (req.res as ExpressResponse).redirect(
+              `${process.env.FRONTEND_URL}/signup/select-role?sessionId=${sessionId}&from=google`
+            );
           }
+
           // Create new user
           const usernameSuggested = await generateUsernameSuggestions(
             profile.emails?.[0].value.split("@")[0],
