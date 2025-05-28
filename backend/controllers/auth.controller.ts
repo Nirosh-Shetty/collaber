@@ -4,6 +4,8 @@ import UserModel from "../models/Users";
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 import { mailer } from "../utils/mailer";
+import sessionStore from "../utils/sessionStore";
+import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
 // import { apiResponse } from "../types/apiResponse";
 export const signUpBasicInfo = async (
   req: Request,
@@ -150,7 +152,8 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
+      maxAge:
+        Number(process.env.JWT_AUTH_TOKEN_MAXAGE) || 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
       sameSite: "strict",
     });
 
@@ -286,6 +289,74 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     return res.status(201).json({ message: "Verified Successfully" });
   } catch (error) {
     console.error(error); // log internally
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+//when user trues tries to login through google and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
+export const completeGoogleSignup = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const { role } = req.body;
+    if (!role) {
+      res.cookie("sessionId", "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 0, // Clear the cookie
+        sameSite: "strict",
+      });
+      return res.status(400).json({ message: "Role is required" });
+    }
+    const sessionId = req.cookies.sessionId;
+    const sessionData = await sessionStore.get(sessionId);
+    if (!sessionData) {
+      return res.status(400).json({
+        message: "Session expired or invalid. Please try signing up again.",
+      });
+    }
+    // If session data is valid, proceed with signup
+    const { email, name, provider } = sessionData;
+    const usernameSuggested = await generateUsernameSuggestions(
+      email.split("@")[0],
+      1
+    );
+    const newUser = new UserModel({
+      name,
+      email,
+      //TODO: check if username is unique if not assign a radom yet relatable username
+      username: usernameSuggested[0],
+      // profilePicture: profile.photos?.[0].value,
+      // password: "GOOGLE_AUTH", // placeholder or null
+      role,
+      authProvider: provider,
+      isVerified: true,
+      isTempAccount: false,
+    });
+
+    await newUser.save();
+    const token = generateToken(newUser._id.toString(), newUser.role);
+    res.cookie("sessionId", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 0, // Clear the cookie
+    });
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
+      sameSite: "strict",
+    });
+
+    res.cookie("sessionId", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 0, // Clear the cookie
+    });
+    res.status(201).json({ message: "Signup successful" });
+  } catch (error) {
+    console.error("Error in completeGoogleSignup:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

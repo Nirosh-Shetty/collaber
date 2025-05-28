@@ -4,9 +4,11 @@ import express from "express";
 import mongoose from "mongoose";
 import router from "./routes/Route";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
+app.use(cookieParser());
 // Middleware
 app.use(express.json());
 app.use(
@@ -53,7 +55,3 @@ app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
 // Passport init
 app.use(passport.initialize());
 app.use(passport.session());
-
-import cookieParser from "cookie-parser";
-
-app.use(cookieParser());

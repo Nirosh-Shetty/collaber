@@ -1,6 +1,7 @@
 import express, { Response, Request } from "express";
 import passport from "passport";
 import {
+  completeGoogleSignup,
   requestOtp,
   signIn,
   signout,
@@ -96,6 +97,9 @@ authRouter.post("/signup/basic-info", signUpBasicInfo);
 //TODO: change the url and controller name. give a signup related name like above
 authRouter.post("/signup/request-otp", requestOtp);
 authRouter.post("/signup/verify-otp", verifyOtp);
+
+//when user trues tries to login through google and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
+authRouter.post("/complete-google-signup", completeGoogleSignup);
 
 // POST /api/auth/signout
 authRouter.post("/signout", signout);

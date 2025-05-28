@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -11,9 +11,11 @@ import {
   ArrowRightIcon,
 } from "lucide-react";
 import Link from "next/link";
+import axios from "axios";
 
 export default function SelectRolePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,16 +23,47 @@ export default function SelectRolePage() {
     setSelectedRole(role);
   };
 
-  const handleContinue = () => {
-    if (!selectedRole) return;
+  const fromProvider = searchParams.get("fromProvider");
 
+  const heading = fromProvider
+    ? "Complete Your Sign Up"
+    : "Create Your Account";
+
+  const subText = fromProvider
+    ? "Before we set up your profile, tell us how you’ll use the platform."
+    : "First, let's understand how you'll be using our platform. Select the role that best describes you.";
+  const step = fromProvider ? "Step 1 of 1" : "Step 1 of 2";
+
+  const handleContinue = async () => {
+    if (!selectedRole) return;
     setIsSubmitting(true);
+    if (fromProvider) {
+      try {
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/complete-google-signup`,
+          {
+            role: selectedRole,
+          },
+          {
+            withCredentials: true, // Important for cookies/session handling
+          }
+        );
+        router.replace("/dashboard");
+      } catch (error: any) {
+        console.error("failed to signup", error.message);
+        //TODO: can give a popup saying the error and click ok to redirect
+        if (error.response.data.status === 500)
+          router.replace(`/signup/select-role?fromProvider=${fromProvider}`);
+        router.replace("/signup/select-role");
+      }
+    }
 
     // Store the selected role in sessionStorage
     // sessionStorage.setItem("selectedRole", selectedRole);
 
     // Navigate to the basic info page
-    router.push(`/signup/basic-info?role=${selectedRole}`);
+    else router.push(`/signup/basic-info?role=${selectedRole}`);
+    setIsSubmitting(false);
   };
 
   return (
@@ -41,15 +74,10 @@ export default function SelectRolePage() {
             <div className="bg-purple-600 text-white text-xs font-medium rounded-full w-6 h-6 flex items-center justify-center mr-2">
               1
             </div>
-            <p className="text-sm font-medium text-muted-foreground">
-              Step 1 of 2
-            </p>
+            <p className="text-sm font-medium text-muted-foreground">{step}</p>
           </div>
-          <h1 className="text-2xl font-bold">Create Your Account</h1>
-          <p className="text-muted-foreground mt-2">
-            First, let&apos;s understand how you&apos;ll be using our platform.
-            Select the role that best describes you.
-          </p>
+          <h1 className="text-2xl font-bold">{heading}</h1>
+          <p className="text-muted-foreground mt-2">{subText}</p>
         </div>
 
         <div className="space-y-4">

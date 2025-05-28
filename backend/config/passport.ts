@@ -47,15 +47,23 @@ passport.use(
             const basicProfile = {
               name: profile.displayName,
               email: profile.emails?.[0].value,
-              picture: profile.photos?.[0].value,
+              //TODO: store the photo in any cloud (cloudinary or aws or something)
+              // picture: profile.photos?.[0].value,
               provider: "google",
             };
 
             const sessionId = await sessionStore.set(basicProfile, 5 * 60); // Store for 5 minutes
 
+            // Store session ID in a cookie
+            (req.res as ExpressResponse).cookie("sessionId", sessionId, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+              maxAge: 10 * 60 * 1000, // 5 minutes
+            });
+
             // Redirect to role selection page with session ID
             return (req.res as ExpressResponse).redirect(
-              `${process.env.FRONTEND_URL}/signup/select-role?sessionId=${sessionId}&from=google`
+              `${process.env.FRONTEND_URL}/signup/select-role?fromProvider=google`
             );
           }
 
