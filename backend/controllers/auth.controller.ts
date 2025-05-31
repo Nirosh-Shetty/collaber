@@ -300,10 +300,9 @@ export const completeGoogleSignup = async (
   try {
     const { role, fromProvider } = req.body;
     if (!fromProvider) {
-      res.cookie("sessionId", "", {
+      res.clearCookie("sessionId", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: 0, // Clear the cookie
         sameSite: "strict",
       });
       return res.status(400).json({
@@ -312,10 +311,9 @@ export const completeGoogleSignup = async (
       });
     }
     if (!role) {
-      res.cookie("sessionId", "", {
+      res.clearCookie("sessionId", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: 0, // Clear the cookie
         sameSite: "strict",
       });
       return res.status(400).json({
@@ -401,22 +399,16 @@ export const completeGoogleSignup = async (
     // Clear the session cookie
     await sessionStore.delete(sessionId);
     // Clear the session cookie and set auth_token cookie
-    res.cookie("sessionId", "", {
+    res.clearCookie("sessionId", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 0, // Clear the cookie
+      sameSite: "strict",
     });
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
       sameSite: "strict",
-    });
-
-    res.cookie("sessionId", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 0, // Clear the cookie
     });
     res.status(201).json({ message: "Signup successful" });
   } catch (error) {
