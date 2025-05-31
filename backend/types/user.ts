@@ -14,6 +14,8 @@ export interface IUser extends Document {
   password: string;
   role: "influencer" | "brand" | "manager";
   profilePicture?: string;
+  isGoogleLinked?: boolean;
+  isFacebookLinked?: boolean;
   rating: number;
   totalReviews: number;
   authProvider: "local" | "google" | "facebook";

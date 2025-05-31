@@ -36,6 +36,7 @@ const UserSchema = new Schema<IUser>(
       select: false,
       // required: [true, "Password is required"],
     },
+    //TODO:authProvider can be removed later(creates confison when there are muiltiple authProvider for same user)
     authProvider: {
       type: String,
       enum: ["local", "google", "facebook"],
@@ -47,6 +48,8 @@ const UserSchema = new Schema<IUser>(
       enum: ["influencer", "brand", "manager"],
       required: true,
     },
+    isGoogleLinked: { type: Boolean, default: false },
+    isFacebookLinked: { type: Boolean, default: false },
     profilePicture: { type: String, default: "" },
     rating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
