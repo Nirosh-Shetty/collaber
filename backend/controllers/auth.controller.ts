@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { mailer } from "../utils/mailer";
 import sessionStore from "../utils/sessionStore";
 import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
+import { uploadProfilePhotoToCloud } from "../utils/uploadProfilePhotoToCloud";
 // import { apiResponse } from "../types/apiResponse";
 export const signUpBasicInfo = async (
   req: Request,
@@ -84,49 +85,52 @@ export const signUpBasicInfo = async (
 export const signIn = async (req: Request, res: Response): Promise<any> => {
   const { identifier, password } = req.body;
 
+  if (!identifier) {
+    return res
+      .status(400)
+      .json({ message: "Identifier is required", errorIn: "identifier" });
+  }
+
+  if (!password) {
+    return res
+      .status(400)
+      .json({ message: "Password is required", errorIn: "password" });
+  }
+
   try {
     const user = await UserModel.findOne({
       $or: [
         { email: identifier },
         { username: identifier },
-        { phoneNumber: identifier },
+        { phone: identifier },
       ],
     }).select("+password");
-    // .lean();
-    if (!user) {
+
+    if (
+      !user ||
+      (!user.isVerified &&
+        user.isTempAccount &&
+        user.reservationExpiresAt &&
+        user.reservationExpiresAt < new Date())
+    ) {
       return res
         .status(401)
-        .json({ message: "User not Found", errorIn: "identifier" });
-    }
-    if (!user || user.authProvider !== "local") {
-      return res
-        .status(401)
-        .json({ message: "Invalid credentials", errorIn: "identifier" });
+        .json({ message: "User not found", errorIn: "identifier" });
     }
 
-    // if (!user.isVerified && user.isTempAccount) {
-    //   if (user.reservationExpiresAt && user.reservationExpiresAt > new Date())
-    //     return res.status(401).json({
-    //       message: "User not verified. Continue to verify the account",
-    //       redirectTo: "/signup/verify-otp",
-    //     });
-    //   else
-    //     return res.status(401).json({
-    //       message: "Reservation expired. You need to signup again",
-    //       redirectTo: "/signup/basic-info",
-    //     });
-    // }
-    //instead
-    if (!user.isVerified && user.isTempAccount && user.reservationExpiresAt) {
+    if (
+      !user.isVerified &&
+      user.isTempAccount &&
+      user.reservationExpiresAt &&
+      user.reservationExpiresAt > new Date()
+    ) {
       return res.status(401).json({
-        message: "Account verification required or session expired",
-        redirectTo:
-          user.reservationExpiresAt > new Date()
-            ? "/signup/verify-otp"
-            : "/signup/basic-info",
+        message: "Account verification required",
+        redirectTo: "/signup/verify-otp",
         errorIn: "identifier",
       });
     }
+
     const isPasswordCorrect = await bcryptjs.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res
@@ -134,26 +138,22 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
         .json({ message: "Incorrect password", errorIn: "password" });
     }
 
-    const loginEvent = {
+    // Add login metadata — trimming is now handled in schema pre-save hook
+    user.loginHistory.unshift({
       ip: req.ip || "unknown",
       userAgent: req.get("User-Agent") || "unknown",
       time: new Date(),
-    };
-    user.loginHistory.unshift(loginEvent);
-
-    // Keep only the latest 5 entries
-    if (user.loginHistory.length > 5) {
-      user.loginHistory = user.loginHistory.slice(0, 5);
-    }
+    });
 
     await user.save();
+
     const token = generateToken(user._id.toString(), user.role);
-    //TODO: add "remember me" feature in the frtonend
+
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge:
-        Number(process.env.JWT_AUTH_TOKEN_MAXAGE) || 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
+        Number(process.env.JWT_AUTH_TOKEN_MAXAGE) || 5 * 24 * 60 * 60 * 1000,
       sameSite: "strict",
     });
 
@@ -164,8 +164,7 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
         username: user.username,
         role: user.role,
       },
-      // token,
-      message: "user signin in successfully",
+      message: "User signed in successfully",
     });
   } catch (error) {
     return res.status(500).json({ message: "Error logging in", error });
@@ -299,7 +298,19 @@ export const completeGoogleSignup = async (
   res: Response
 ): Promise<any> => {
   try {
-    const { role } = req.body;
+    const { role, fromProvider } = req.body;
+    if (!fromProvider) {
+      res.cookie("sessionId", "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 0, // Clear the cookie
+        sameSite: "strict",
+      });
+      return res.status(400).json({
+        message: "fromProvider is required",
+        redirectTo: "/signup/select-role",
+      });
+    }
     if (!role) {
       res.cookie("sessionId", "", {
         httpOnly: true,
@@ -307,36 +318,89 @@ export const completeGoogleSignup = async (
         maxAge: 0, // Clear the cookie
         sameSite: "strict",
       });
-      return res.status(400).json({ message: "Role is required" });
+      return res.status(400).json({
+        message: "Role is required",
+        redirectTo: "/signup/select-role",
+      });
     }
     const sessionId = req.cookies.sessionId;
     const sessionData = await sessionStore.get(sessionId);
     if (!sessionData) {
       return res.status(400).json({
         message: "Session expired or invalid. Please try signing up again.",
+        redirectTo: "/signup/select-role",
       });
     }
+
     // If session data is valid, proceed with signup
-    const { email, name, provider } = sessionData;
+    const {
+      email,
+      name,
+      provider,
+      profilePictureUrl = "",
+      googleId = null,
+      facebookId = null,
+    } = sessionData;
+    if (!email || !name || !provider) {
+      return res.status(400).json({
+        message: "Incomplete session data. Please try signing up again.",
+        redirectTo: "/signup/select-role",
+      });
+    }
+    if (fromProvider !== provider) {
+      return res.status(400).json({
+        message: "Invalid provider",
+        redirectTo: "/signup/select-role",
+      });
+    }
+
+    const existingUser = await UserModel.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "User already exists. Please log in.",
+        redirectTo: "/login",
+      });
+    }
+
     const usernameSuggested = await generateUsernameSuggestions(
       email.split("@")[0],
       1
     );
+    let uploadedPictureUrl = "";
+    if (profilePictureUrl) {
+      try {
+        uploadedPictureUrl = await uploadProfilePhotoToCloud(
+          profilePictureUrl,
+          "profile-pictures"
+        );
+      } catch (uploadErr) {
+        console.error("Profile picture upload failed:", uploadErr);
+        uploadedPictureUrl = "";
+      }
+    }
     const newUser = new UserModel({
       name,
       email,
-      //TODO: check if username is unique if not assign a radom yet relatable username
       username: usernameSuggested[0],
+      linkedAccounts: [provider],
       // profilePicture: profile.photos?.[0].value,
       // password: "GOOGLE_AUTH", // placeholder or null
       role,
-      authProvider: provider,
+      profilePicture: uploadedPictureUrl,
       isVerified: true,
       isTempAccount: false,
     });
+    if (provider === "google") {
+      newUser.googleId = googleId;
+    } else if (provider === "facebook") {
+      newUser.facebookId = facebookId;
+    }
 
     await newUser.save();
     const token = generateToken(newUser._id.toString(), newUser.role);
+    // Clear the session cookie
+    await sessionStore.delete(sessionId);
+    // Clear the session cookie and set auth_token cookie
     res.cookie("sessionId", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

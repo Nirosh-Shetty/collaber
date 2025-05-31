@@ -14,11 +14,13 @@ export interface IUser extends Document {
   password: string;
   role: "influencer" | "brand" | "manager";
   profilePicture?: string;
-  isGoogleLinked?: boolean;
-  isFacebookLinked?: boolean;
+  // isGoogleLinked?: boolean;
+  // isFacebookLinked?: boolean;
   rating: number;
   totalReviews: number;
-  authProvider: "local" | "google" | "facebook";
+  //TODO: authProvider can be removed later (creates confusion when there are multiple authProviders for the same user)
+  linkedAccounts?: string[]; // ["google", "facebook", "local"]
+  // authProvider: "local" | "google" | "facebook";
   googleId?: string;
   facebookId?: string;
   influencerDetails?: {

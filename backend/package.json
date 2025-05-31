@@ -11,7 +11,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.6.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -26,7 +28,8 @@
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",
     "passport-google-oauth20": "^2.0.0",
-    "passport-local": "^1.0.0"
+    "passport-local": "^1.0.0",
+    "streamifier": "^0.1.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
@@ -41,6 +44,7 @@
     "@types/passport": "^1.0.17",
     "@types/passport-facebook": "^3.0.3",
     "@types/passport-google-oauth20": "^2.0.16",
+    "@types/streamifier": "^0.1.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.2"
   }

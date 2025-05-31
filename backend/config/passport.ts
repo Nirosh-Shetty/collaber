@@ -10,6 +10,7 @@ import dotenv from "dotenv";
 import { Request, Response as ExpressResponse } from "express";
 import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
 import sessionStore from "../utils/sessionStore";
+import { uploadProfilePhotoToCloud } from "../utils/uploadProfilePhotoToCloud";
 dotenv.config();
 
 passport.use(
@@ -18,7 +19,7 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       callbackURL: `${process.env.BACKEND_URL}/api/auth/google/callback`,
-      passReqToCallback: true, // Required to access req in callback
+      passReqToCallback: true,
     },
     async (
       req: Request,
@@ -29,66 +30,98 @@ passport.use(
     ) => {
       try {
         const role = req.query?.state as string;
+        const email = profile.emails?.[0]?.value;
+        if (!email) return done(null, false, { message: "Email missing" });
 
-        // console.log(role, "this is role from query");
-        // if (!role || !["influencer", "brand", "manager"].includes(role)) {
-        //   return done(null, false, { message: "Invalid or missing role." });
-        // }
-        // console.log("this is google profile", profile);
-
-        // Check if user already exists
-        let user = await UserModel.findOne({
-          email: profile.emails?.[0].value,
-        });
+        let user = await UserModel.findOne({ email });
 
         if (!user) {
-          if (!role) {
-            // Securely store the profile info in a short-lived cookie
+          if (!role || !["influencer", "brand", "manager"].includes(role)) {
+            // If no role is provided, redirect to select role page
             const basicProfile = {
               name: profile.displayName,
-              email: profile.emails?.[0].value,
-              //TODO: store the photo in any cloud (cloudinary or aws or something)
-              // picture: profile.photos?.[0].value,
+              email,
               provider: "google",
+              profilePictureUrl: profile.photos?.[0]?.value,
+              googleId: profile.id,
             };
 
-            const sessionId = await sessionStore.set(basicProfile, 5 * 60); // Store for 5 minutes
-
-            // Store session ID in a cookie
+            const sessionId = await sessionStore.set(basicProfile, 5 * 60);
             (req.res as ExpressResponse).cookie("sessionId", sessionId, {
               httpOnly: true,
-              secure: process.env.NODE_ENV === "production", // Use secure cookies in production
-              maxAge: 10 * 60 * 1000, // 5 minutes
+              secure: process.env.NODE_ENV === "production",
+              maxAge: 10 * 60 * 1000,
             });
 
-            // Redirect to role selection page with session ID
             return (req.res as ExpressResponse).redirect(
               `${process.env.FRONTEND_URL}/signup/select-role?fromProvider=google`
             );
           }
 
-          // Create new user
           const usernameSuggested = await generateUsernameSuggestions(
-            profile.emails?.[0].value.split("@")[0],
+            email.split("@")[0],
             1
           );
+          const profilePictureUrl = profile.photos?.[0]?.value;
+          // console.log(profilePictureUrl);
+          let uploadedPictureUrl = "";
+          if (profilePictureUrl) {
+            try {
+              uploadedPictureUrl = await uploadProfilePhotoToCloud(
+                profilePictureUrl,
+                "profile-pictures"
+              );
+            } catch (uploadErr) {
+              console.error("Profile picture upload failed:", uploadErr);
+              uploadedPictureUrl = "";
+            }
+          }
+
           user = new UserModel({
             name: profile.displayName,
-            email: profile.emails?.[0].value,
-            //TODO: check if username is unique if not assign a radom yet relatable username
+            email,
             username: usernameSuggested[0],
-            // profilePicture: profile.photos?.[0].value,
-            // password: "GOOGLE_AUTH", // placeholder or null
             role,
-            authProvider: "google",
+            googleId: profile.id,
             isVerified: true,
             isTempAccount: false,
+            linkedAccounts: ["google"],
+            profilePicture: uploadedPictureUrl,
           });
 
           await user.save();
+        } else {
+          // Add "google" to linkedAccounts if not already present
+          if (!user.linkedAccounts) {
+            user.linkedAccounts = [];
+          }
+          if (!user.linkedAccounts.includes("google")) {
+            user.linkedAccounts.push("google");
+          }
+
+          if (!user.googleId) user.googleId = profile.id;
+          if (!user.profilePicture && profile.photos?.[0]?.value) {
+            const profilePictureUrl = profile.photos?.[0]?.value;
+            console.log(profilePictureUrl);
+            let uploadedPictureUrl = "";
+            if (profilePictureUrl) {
+              try {
+                uploadedPictureUrl = await uploadProfilePhotoToCloud(
+                  profilePictureUrl,
+                  "profile-pictures"
+                );
+              } catch (uploadErr) {
+                console.error("Profile picture upload failed:", uploadErr);
+                uploadedPictureUrl = "";
+              }
+            }
+
+            user.profilePicture = uploadedPictureUrl;
+          }
+          await user.save();
         }
 
-        done(null, {
+        return done(null, {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
@@ -96,8 +129,8 @@ passport.use(
           role: user.role,
         });
       } catch (err) {
-        console.log(err, "this is error in google strategy");
-        done(err, undefined);
+        console.error("Google strategy error:", err);
+        return done(err, undefined);
       }
     }
   )
@@ -110,7 +143,7 @@ passport.use(
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       callbackURL: `${process.env.BACKEND_URL}/api/auth/facebook/callback`,
       profileFields: ["id", "emails", "name", "picture.type(large)"],
-      passReqToCallback: true, // enable req access in verify callback
+      passReqToCallback: true,
     },
     async (
       req: Request,
@@ -121,38 +154,98 @@ passport.use(
     ) => {
       try {
         const role = req.query?.state as string;
-
-        // if (!role || !["influencer", "brand", "manager"].includes(role)) {
-        //   return done(null, false, { message: "Invalid or missing role." });
-        // }
-
-        const email = profile.emails?.[0].value;
-
+        const email = profile.emails?.[0]?.value;
         if (!email) {
           return done(null, false, {
             message: "Email not found in Facebook profile.",
           });
         }
-        const usernameSuggested = await generateUsernameSuggestions(
-          profile.emails?.[0].value.split("@")[0],
-          1
-        );
+
         let user = await UserModel.findOne({ email });
+
         if (!user) {
+          if (!role || !["influencer", "brand", "manager"].includes(role)) {
+            // If no role is provided, redirect to select role page
+            const basicProfile = {
+              name: profile.displayName,
+              email,
+              provider: "facebook",
+              profilePictureUrl: profile.photos?.[0]?.value,
+              facebookId: profile.id,
+            };
+
+            const sessionId = await sessionStore.set(basicProfile, 5 * 60);
+            (req.res as ExpressResponse).cookie("sessionId", sessionId, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+              maxAge: 10 * 60 * 1000,
+            });
+
+            return (req.res as ExpressResponse).redirect(
+              `${process.env.FRONTEND_URL}/signup/select-role?fromProvider=facebook`
+            );
+          }
+
+          const usernameSuggested = await generateUsernameSuggestions(
+            email.split("@")[0],
+            1
+          );
+          const profilePictureUrl = profile.photos?.[0]?.value;
+          let uploadedPictureUrl = "";
+          if (profilePictureUrl) {
+            try {
+              uploadedPictureUrl = await uploadProfilePhotoToCloud(
+                profilePictureUrl,
+                "profile-pictures"
+              );
+            } catch (uploadErr) {
+              console.error("Profile picture upload failed:", uploadErr);
+              uploadedPictureUrl = "";
+            }
+          }
+
           user = new UserModel({
             name: profile.displayName,
-            email: profile.emails?.[0].value,
+            email,
             username: usernameSuggested[0],
-            // profilePicture: profile.photos?.[0].value,
-            // password: "FACEBOOK_AUTH", // just a placeholder
+            facebookId: profile.id,
             role,
-            authProvider: "facebook",
             isVerified: true,
             isTempAccount: false,
+            linkedAccounts: ["facebook"],
+            profilePicture: uploadedPictureUrl,
           });
 
           await user.save();
+        } else {
+          if (!user.linkedAccounts) {
+            user.linkedAccounts = [];
+          }
+          if (!user.linkedAccounts.includes("facebook")) {
+            user.linkedAccounts.push("facebook");
+          }
+
+          if (!user.facebookId) user.facebookId = profile.id;
+          if (!user.profilePicture && profile.photos?.[0]?.value) {
+            const profilePictureUrl = profile.photos?.[0]?.value;
+            let uploadedPictureUrl = "";
+            if (profilePictureUrl) {
+              try {
+                uploadedPictureUrl = await uploadProfilePhotoToCloud(
+                  profilePictureUrl,
+                  "profile-pictures"
+                );
+              } catch (uploadErr) {
+                console.error("Profile picture upload failed:", uploadErr);
+                uploadedPictureUrl = "";
+              }
+            }
+
+            user.profilePicture = uploadedPictureUrl;
+          }
+          await user.save();
         }
+
         return done(null, {
           id: user._id.toString(),
           name: user.name,
@@ -161,8 +254,32 @@ passport.use(
           role: user.role,
         });
       } catch (err) {
+        console.error("Facebook strategy error:", err);
         return done(err, undefined);
       }
     }
   )
 );
+
+passport.serializeUser((user: any, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id: string, done) => {
+  try {
+    const user = await UserModel.findById(id);
+    if (user) {
+      done(null, {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      });
+    } else {
+      done(null, null);
+    }
+  } catch (error) {
+    done(error, null);
+  }
+});

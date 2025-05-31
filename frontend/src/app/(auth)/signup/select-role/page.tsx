@@ -42,6 +42,7 @@ export default function SelectRolePage() {
         await axios.post(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/complete-google-signup`,
           {
+            fromProvider,
             role: selectedRole,
           },
           {
@@ -53,6 +54,7 @@ export default function SelectRolePage() {
         console.error("failed to signup", error.message);
         //TODO: can give a popup saying the error and click ok to redirect
         if (error.response.data.status === 500)
+          //TODO: give a popup istaed of this
           router.replace(`/signup/select-role?fromProvider=${fromProvider}`);
         router.replace("/signup/select-role");
       }

@@ -7,9 +7,9 @@ const LoginMetadataSchema = new Schema(
     userAgent: { type: String },
     time: { type: Date, required: true, default: Date.now },
   },
-  { _id: false } // Prevents MongoDB from creating _id for each subdocument
+  { _id: false }
 );
-// Mongoose Schema
+
 const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
@@ -28,28 +28,29 @@ const UserSchema = new Schema<IUser>(
     phone: {
       type: Number,
       unique: true,
-      sparse: true, // Allows multiple null values
+      sparse: true,
       match: [/^\d{10}$/, "Phone number must be 10 digits"],
     },
     password: {
       type: String,
       select: false,
-      // required: [true, "Password is required"],
     },
-    //TODO:authProvider can be removed later(creates confison when there are muiltiple authProvider for same user)
-    authProvider: {
-      type: String,
-      enum: ["local", "google", "facebook"],
-    },
+
     googleId: String,
     facebookId: String,
+
+    linkedAccounts: {
+      type: [String],
+      enum: ["local", "google", "facebook"],
+      default: [],
+    },
+
     role: {
       type: String,
       enum: ["influencer", "brand", "manager"],
       required: true,
     },
-    isGoogleLinked: { type: Boolean, default: false },
-    isFacebookLinked: { type: Boolean, default: false },
+
     profilePicture: { type: String, default: "" },
     rating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
@@ -73,25 +74,42 @@ const UserSchema = new Schema<IUser>(
       },
       required: false,
     },
+
     isVerified: { type: Boolean, default: false },
     reservationExpiresAt: { type: Date, default: null },
     isTempAccount: { type: Boolean, default: false },
+
     otp: {
       type: String,
-      min: 100000,
-      max: 999999,
+      match: [/^\d{6}$/, "OTP must be a 6-digit number"],
     },
     lastOtpSentAt: Date,
 
-    //   managerDetails: {
-    //     managedInfluencers: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    //   },
-    loginHistory: [LoginMetadataSchema], // array of login metadata
+    loginHistory: [LoginMetadataSchema],
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt automatically
+    timestamps: true,
   }
 );
+
+// ✅ Hook to clean username
+UserSchema.pre("save", function (next) {
+  if (this.username) {
+    this.username = this.username
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_");
+  }
+  next();
+});
+
+// ✅ Hook to limit login history to last 10 entries
+UserSchema.pre("save", function (next) {
+  if (this.loginHistory?.length > 10) {
+    this.loginHistory = this.loginHistory.slice(-10);
+  }
+  next();
+});
 
 const UserModel =
   (mongoose.models.User as mongoose.Model<IUser>) ||
