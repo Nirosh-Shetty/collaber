@@ -18,7 +18,6 @@ export interface IUser extends Document {
   // isFacebookLinked?: boolean;
   rating: number;
   totalReviews: number;
-  //TODO: authProvider can be removed later (creates confusion when there are multiple authProviders for the same user)
   linkedAccounts?: string[]; // ["google", "facebook", "local"]
   // authProvider: "local" | "google" | "facebook";
   googleId?: string;

@@ -29,6 +29,7 @@ const UserSchema = new Schema<IUser>(
       type: Number,
       unique: true,
       sparse: true,
+      // required: [true, "Phone number is required"]
       match: [/^\d{10}$/, "Phone number must be 10 digits"],
     },
     password: {

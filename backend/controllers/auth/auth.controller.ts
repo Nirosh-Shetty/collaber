@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import { generateToken } from "../utils/generateToken";
-import UserModel from "../models/Users";
+import { generateToken } from "../../utils/generateToken";
+import UserModel from "../../models/Users";
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
-import { mailer } from "../utils/mailer";
-import sessionStore from "../utils/sessionStore";
-import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
-import { uploadProfilePhotoToCloud } from "../utils/uploadProfilePhotoToCloud";
+import { mailer } from "../../utils/mailer";
+import sessionStore from "../../utils/sessionStore";
+import { generateUsernameSuggestions } from "../../utils/generateUsernameSuggestions";
+import { uploadProfilePhotoToCloud } from "../../utils/uploadProfilePhotoToCloud";
 // import { apiResponse } from "../types/apiResponse";
 export const signUpBasicInfo = async (
   req: Request,
@@ -48,13 +48,14 @@ export const signUpBasicInfo = async (
     if (existingUser) {
       await UserModel.deleteOne({ _id: existingUser._id });
     }
+    if (!name || !email || !username || !password || !role) {
+      return res.status(400).json({
+        message: "All fields are required",
+        errorIn: "allFields",
+      });
+    }
 
     // ✅ Now create a new temp user
-    const loginEvent = {
-      ip: req.ip || "unknown",
-      userAgent: req.get("User-Agent") || "unknown",
-      time: new Date(),
-    };
     const hashedPass = await bcryptjs.hash(password, 10);
 
     await UserModel.create({
@@ -70,8 +71,6 @@ export const signUpBasicInfo = async (
         Date.now() +
           (Number(process.env.USER_RESERVATION_EXPIRY_MS) || 60 * 60 * 1000)
       ),
-      //TODO: login history is not working
-      loginHistory: [loginEvent],
     });
 
     return res.status(201).json({
@@ -98,12 +97,15 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
   }
 
   try {
+    // Check if identifier is email, username, or phone number
+    const orQuery: any[] = [{ email: identifier }, { username: identifier }];
+    // If identifier is a phone number, add it to the query
+    if (/^\d{10}$/.test(identifier)) {
+      orQuery.push({ phone: Number(identifier) });
+    }
+
     const user = await UserModel.findOne({
-      $or: [
-        { email: identifier },
-        { username: identifier },
-        { phone: identifier },
-      ],
+      $or: orQuery,
     }).select("+password");
 
     if (
@@ -130,7 +132,13 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
         errorIn: "identifier",
       });
     }
-
+    if (!user.password) {
+      return res.status(400).json({
+        message:
+          "This account was created with a social login. Please use Google or Facebook to sign in or reset the password",
+        errorIn: "identifier",
+      });
+    }
     const isPasswordCorrect = await bcryptjs.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res
@@ -138,12 +146,18 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
         .json({ message: "Incorrect password", errorIn: "password" });
     }
 
-    // Add login metadata — trimming is now handled in schema pre-save hook
-    user.loginHistory.unshift({
-      ip: req.ip || "unknown",
+    //store the login event
+    const ip =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.ip ||
+      "unknown";
+    const loginEvent = {
+      ip,
       userAgent: req.get("User-Agent") || "unknown",
       time: new Date(),
-    });
+    };
+    // Update login history
+    user.loginHistory.push(loginEvent);
 
     await user.save();
 
@@ -167,6 +181,7 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
       message: "User signed in successfully",
     });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ message: "Error logging in", error });
   }
 };
@@ -267,14 +282,24 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
       });
 
     // if (user.otp !== otp)
-    //TODO: chanhe this during production
+    //TODO: change this during production
     if ("111111" !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
 
+    const ip =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.ip ||
+      "unknown";
+    const loginEvent = {
+      ip,
+      userAgent: req.get("User-Agent") || "unknown",
+      time: new Date(),
+    };
     user.isVerified = true;
     user.otp = undefined; // Clear OTP after verification
     user.isTempAccount = false; // Mark account as permanent
     user.reservationExpiresAt = undefined;
+    user.loginHistory.push(loginEvent); // Store login event
 
     await user.save();
 
@@ -292,8 +317,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
-//when user trues tries to login through google and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
-export const completeGoogleSignup = async (
+//when user trues tries to login through google/facebook and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
+export const completeSocialAuth = async (
   req: Request,
   res: Response
 ): Promise<any> => {
@@ -412,7 +437,7 @@ export const completeGoogleSignup = async (
     });
     res.status(201).json({ message: "Signup successful" });
   } catch (error) {
-    console.error("Error in completeGoogleSignup:", error);
+    console.error("Error in completeSocialAuth:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

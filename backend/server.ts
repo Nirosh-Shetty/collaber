@@ -55,3 +55,6 @@ app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
 // Passport init
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Trust proxy for secure cookies in production (if behind a reverse proxy)
+app.set("trust proxy", true);

@@ -40,7 +40,7 @@ export default function SelectRolePage() {
     if (fromProvider) {
       try {
         await axios.post(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/complete-google-signup`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/complete-social-auth`,
           {
             fromProvider,
             role: selectedRole,

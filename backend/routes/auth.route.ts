@@ -1,13 +1,13 @@
 import express, { Response, Request } from "express";
 import passport from "passport";
 import {
-  completeGoogleSignup,
+  completeSocialAuth,
   requestOtp,
   signIn,
   signout,
   signUpBasicInfo,
   verifyOtp,
-} from "../controllers/auth.controller";
+} from "../controllers/auth/auth.controller";
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
 import { checkUsernameUnique } from "../controllers/checkUsernameUnique.controller";
@@ -52,7 +52,6 @@ authRouter.get(
       maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
       sameSite: "lax",
     });
-    // TODO: keep this in .env file
     res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
   }
 );
@@ -98,8 +97,8 @@ authRouter.post("/signup/basic-info", signUpBasicInfo);
 authRouter.post("/signup/request-otp", requestOtp);
 authRouter.post("/signup/verify-otp", verifyOtp);
 
-//when user trues tries to login through google and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
-authRouter.post("/complete-google-signup", completeGoogleSignup);
+//when user tries to login through google/facebook and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
+authRouter.post("/complete-social-auth", completeSocialAuth);
 
 // POST /api/auth/signout
 authRouter.post("/signout", signout);

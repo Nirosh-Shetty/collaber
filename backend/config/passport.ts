@@ -34,7 +34,15 @@ passport.use(
         if (!email) return done(null, false, { message: "Email missing" });
 
         let user = await UserModel.findOne({ email });
-
+        const ip =
+          (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+          req.ip ||
+          "unknown";
+        const loginEvent = {
+          ip,
+          userAgent: req.get("User-Agent") || "unknown",
+          time: new Date(),
+        };
         if (!user) {
           if (!role || !["influencer", "brand", "manager"].includes(role)) {
             // If no role is provided, redirect to select role page
@@ -87,6 +95,7 @@ passport.use(
             isTempAccount: false,
             linkedAccounts: ["google"],
             profilePicture: uploadedPictureUrl,
+            loginHistory: [loginEvent],
           });
 
           await user.save();
@@ -118,6 +127,8 @@ passport.use(
 
             user.profilePicture = uploadedPictureUrl;
           }
+          user.loginHistory.push(loginEvent);
+
           await user.save();
         }
 
@@ -153,6 +164,7 @@ passport.use(
       done: VerifyCallback
     ) => {
       try {
+        console.log(req.ip, "userAgent:", req.get("User-Agent"));
         const role = req.query?.state as string;
         const email = profile.emails?.[0]?.value;
         if (!email) {
@@ -162,7 +174,15 @@ passport.use(
         }
 
         let user = await UserModel.findOne({ email });
-
+        const ip =
+          (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+          req.ip ||
+          "unknown";
+        const loginEvent = {
+          ip,
+          userAgent: req.get("User-Agent") || "unknown",
+          time: new Date(),
+        };
         if (!user) {
           if (!role || !["influencer", "brand", "manager"].includes(role)) {
             // If no role is provided, redirect to select role page
@@ -214,6 +234,7 @@ passport.use(
             isTempAccount: false,
             linkedAccounts: ["facebook"],
             profilePicture: uploadedPictureUrl,
+            loginHistory: [loginEvent],
           });
 
           await user.save();
@@ -243,6 +264,7 @@ passport.use(
 
             user.profilePicture = uploadedPictureUrl;
           }
+          user.loginHistory.push(loginEvent);
           await user.save();
         }
 
