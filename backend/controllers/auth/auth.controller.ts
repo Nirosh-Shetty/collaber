@@ -234,7 +234,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
       });
     }
     const otp = crypto.randomInt(100000, 1000000).toString(); // Generate a 6-digit OTP
-    const response = await mailer(email, user.username, otp);
+    const response = await mailer(email, user.username, otp, "otp");
     if (!response) {
       return res.status(500).json({ message: "Error sending OTP" });
     }

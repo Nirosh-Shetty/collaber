@@ -11,6 +11,10 @@ import {
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
 import { checkUsernameUnique } from "../controllers/checkUsernameUnique.controller";
+import {
+  forgotPassword,
+  resetPassword,
+} from "../controllers/auth/passowrd.controller";
 const authRouter = express.Router();
 
 authRouter.post("/signin", signIn);
@@ -104,5 +108,9 @@ authRouter.post("/complete-social-auth", completeSocialAuth);
 authRouter.post("/signout", signout);
 
 authRouter.post("/check-username-unique", checkUsernameUnique);
+
+//for password reset and password reset link
+authRouter.post("/reset-password", resetPassword);
+authRouter.post("/forgot-password", forgotPassword);
 
 export default authRouter;

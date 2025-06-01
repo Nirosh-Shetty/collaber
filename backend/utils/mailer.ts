@@ -1,100 +1,94 @@
 import nodemailer from "nodemailer";
-// import VerificationEmail from "../../emails/verificationEmail";
+
 const transporter = nodemailer.createTransport({
   host: "sandbox.smtp.mailtrap.io",
   port: 587,
-  secure: false, // Use `true` for port 465, `false` for all other ports
+  secure: false,
   auth: {
     user: process.env.MAILTRAP_USERNAME,
     pass: process.env.MAILTRAP_PASSWORD,
   },
 });
 
+type MailTemplateType = "otp" | "resetPassword";
+
 export const mailer = async (
   email: string,
   username: string,
-  verifyCode?: string
+  codeOrLink: string,
+  type: MailTemplateType
 ): Promise<any> => {
-  const htmlContent = `
-  <!DOCTYPE html>
-  <html lang="en" dir="ltr">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Verification Code</title>
-      <style>
-        @font-face {
-          font-family: 'Roboto';
-          font-style: normal;
-          font-weight: 400;
-          mso-font-alt: 'Verdana';
-          src: url(https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2) format('woff2');
-        }
-        body {
-          font-family: 'Roboto', Verdana;
-          margin: 0;
-          padding: 20px;
-        }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 20px;
-          border: 1px solid #ddd;
-          border-radius: 10px;
-        }
-        h2 {
-          color: #333;
-        }
-        p {
-          font-size: 14px;
-          line-height: 24px;
-          margin: 16px 0;
-        }
-        .otp {
-          font-size: 20px;
-          font-weight: bold;
-          margin: auto;
-        }
-        .link {
-          color: #007bff;
-          text-decoration: none;
-        }
-        .link:hover {
-          text-decoration: underline;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h2>Hello ${username},</h2>
-        <p>Thank you for registering. Please use the following verification code to complete your registration:</p>
-        <h1 class="otp">${verifyCode}</h1>
-        <p>If you did not request this code, please ignore this email.</p>
-        <p>
-          Or <a href="http://localhost:3000/verify/${username}?code=${verifyCode}" class="link">click here to verify your email</a>.
-        </p>
-      </div>
-    </body>
-  </html>
-`;
+  let subject = "";
+  let htmlContent = "";
+
+  if (type === "otp") {
+    subject = "Email Verification Code";
+    htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Verification Code</title>
+        <style>
+          body { font-family: 'Roboto', Verdana; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
+          .otp { font-size: 24px; font-weight: bold; color: #2c3e50; }
+          .link { color: #007bff; text-decoration: none; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h2>Hello ${username},</h2>
+          <p>Please use the following verification code:</p>
+          <div class="otp">${codeOrLink}</div>
+          <p>Or <a class="link" href="http://localhost:3000/verify/${username}?code=${codeOrLink}">click here to verify</a>.</p>
+        </div>
+      </body>
+    </html>`;
+  } else if (type === "resetPassword") {
+    subject = "Reset Your Password";
+    htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Reset Password</title>
+        <style>
+          body { font-family: 'Roboto', Verdana; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
+          .link-btn { display: inline-block; padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h2>Hello ${username},</h2>
+          <p>You requested to reset your password. Click the button below to proceed:</p>
+          <a class="link-btn" href="${codeOrLink}">Reset Password</a>
+          <p>If you didn’t request this, please ignore this email.</p>
+        </div>
+      </body>
+    </html>`;
+  }
 
   try {
-    const mailOptions = {
+    await transporter.sendMail({
       from: "niroshshetty@gmail.com",
       to: email,
-      subject: "Verification OTP",
+      subject,
       html: htmlContent,
-    };
-    await transporter.sendMail(mailOptions);
+    });
 
     return {
       success: true,
-      message: "Verification code sent to your Email",
+      message: `${
+        type === "otp" ? "Verification code" : "Password reset link"
+      } sent to email.`,
     };
   } catch (error: any) {
-    console.error(error, "mailer");
+    console.error("Mailer error:", error);
     return {
       success: false,
-      message: `Unable to send Verification code: ${error.message}`,
+      message: `Failed to send email: ${error.message}`,
     };
   }
 };
