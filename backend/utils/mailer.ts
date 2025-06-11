@@ -14,7 +14,7 @@ type MailTemplateType = "otp" | "resetPassword";
 
 export const mailer = async (
   email: string,
-  username: string,
+  username: string | "User",
   codeOrLink: string,
   type: MailTemplateType
 ): Promise<any> => {
@@ -22,52 +22,49 @@ export const mailer = async (
   let htmlContent = "";
 
   if (type === "otp") {
-    subject = "Email Verification Code";
+    subject = "Your Verification Code";
     htmlContent = `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Verification Code</title>
-        <style>
-          body { font-family: 'Roboto', Verdana; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
-          .otp { font-size: 24px; font-weight: bold; color: #2c3e50; }
-          .link { color: #007bff; text-decoration: none; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h2>Hello ${username},</h2>
-          <p>Please use the following verification code:</p>
-          <div class="otp">${codeOrLink}</div>
-          <p>Or <a class="link" href="http://localhost:3000/verify/${username}?code=${codeOrLink}">click here to verify</a>.</p>
-        </div>
-      </body>
-    </html>`;
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Email Verification</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+      <div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <h2 style="color: #333333;">Hello ${username || "User"},</h2>
+        <p style="color: #555555;">Thank you for signing up. Use the verification code below to complete your registration:</p>
+        <div style="font-size: 32px; font-weight: bold; color: #2c3e50; text-align: center; margin: 20px 0;">${codeOrLink}</div>
+        <p style="color: #777777;">If you didn’t request this, please ignore this email.</p>
+        <p style="color: #777777;">– The Team</p>
+      </div>
+    </body>
+  </html>
+  `;
   } else if (type === "resetPassword") {
     subject = "Reset Your Password";
     htmlContent = `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Reset Password</title>
-        <style>
-          body { font-family: 'Roboto', Verdana; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
-          .link-btn { display: inline-block; padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h2>Hello ${username},</h2>
-          <p>You requested to reset your password. Click the button below to proceed:</p>
-          <a class="link-btn" href="${codeOrLink}">Reset Password</a>
-          <p>If you didn’t request this, please ignore this email.</p>
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Password Reset</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+      <div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <h2 style="color: #333333;">Hello ${username || "User"},</h2>
+        <p style="color: #555555;">We received a request to reset your password. Click the button below to proceed:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${codeOrLink}" style="background-color: #007bff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Password</a>
         </div>
-      </body>
-    </html>`;
+        <p style="color: #777777;">If you didn’t request this, you can safely ignore this email.</p>
+        <p style="color: #777777;">– The Team</p>
+      </div>
+    </body>
+  </html>
+  `;
   }
 
   try {

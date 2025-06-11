@@ -22,7 +22,6 @@ export default function VerifyOtpPage() {
   const [countdown, setCountdown] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState("");
-
   const {
     handleSubmit,
     setValue,
@@ -30,6 +29,7 @@ export default function VerifyOtpPage() {
   } = useForm<z.infer<typeof verifySchema>>({
     resolver: zodResolver(verifySchema),
   });
+
   useEffect(() => {
     try {
       const signupData = sessionStorage.getItem("signupData");
@@ -86,6 +86,7 @@ export default function VerifyOtpPage() {
           },
         }
       );
+      setError("");
       setCountdown(60);
       sessionStorage.setItem("lastOtpSentAt", Date.now().toString());
       setOtp(["", "", "", "", "", ""]);
@@ -265,7 +266,7 @@ export default function VerifyOtpPage() {
           </form>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              Didn&#39;t receive the code?
+              Didn&#39;t receive the code? &nbsp;
               {countdown > 0 ? (
                 <span>Resend in {countdown}s</span>
               ) : (

@@ -40,25 +40,42 @@ export const forgotPassword = async (
   res: Response
 ): Promise<any> => {
   const { email } = req.body;
+
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
   }
+
   try {
-    const user = await UserModel.find({ email });
-    if (!user || user.length === 0) {
+    // 1. Find user
+    const user = await UserModel.findOne({ email });
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    // Generate a random token and hash it
-    const existingToken = await sessionStore.get(email);
-    if (existingToken) {
-      return res
-        .status(400)
-        .json({ message: "A reset request is already pending" });
+
+    // 2. Optional: Rate-limit resend attempts (30 seconds)
+    const blockKey = `reset_block_${email}`;
+    const isBlocked = await sessionStore.get(blockKey);
+    if (isBlocked) {
+      return res.status(429).json({ message: "Please wait before resending" });
     }
-    const token = crypto.randomBytes(32).toString("hex");
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    await sessionStore.set(hashedToken, email, 3600); // Store token for 1 hour
-    await mailer(email, " ", hashedToken, "resetPassword");
+    await sessionStore.setWithKey(blockKey, "1", 60); // block next request for 1 minute
+
+    // 3. Store reset info in Redis session store
+    const tokenPayload = {
+      userId: user._id,
+      email: user.email,
+    };
+
+    const tokenTTL = 60 * 30; // 30 minutes
+    const token = await sessionStore.set(tokenPayload, tokenTTL);
+
+    // 4. Generate reset link
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
+    // 5. Send email
+    await mailer(email, "Reset Your Password", resetLink, "resetPassword");
+
+    return res.status(200).json({ message: "Reset email sent successfully" });
   } catch (error) {
     console.error("Error in forgotPassword:", error);
     return res.status(500).json({ message: "Internal server error" });
