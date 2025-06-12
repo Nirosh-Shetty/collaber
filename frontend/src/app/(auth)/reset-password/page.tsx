@@ -8,13 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircleIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { resetPasswordSchema } from "@/schemas/forgotPassword.schema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const [password, setPassword] = useState("");
+  // const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -22,6 +26,20 @@ export default function ResetPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  const {
+    handleSubmit,
+    register,
+    getValues,
+    watch,
+    formState: { errors },
+  } = useForm<z.infer<typeof resetPasswordSchema>>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+  const password = watch("password");
   // Password strength indicators
   const hasMinLength = password.length >= 8;
   const hasLetter = /[a-zA-Z]/.test(password);
@@ -30,21 +48,20 @@ export default function ResetPasswordPage() {
   const isPasswordStrong =
     hasMinLength && hasLetter && hasNumber && hasSpecialChar;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePassSubmit = (data: z.infer<typeof resetPasswordSchema>) => {
     setError("");
 
     // Validate password
-    if (!isPasswordStrong) {
-      setError("Please ensure your password meets all requirements");
-      return;
-    }
+    // if (!isPasswordStrong) {
+    //   setError("Please ensure your password meets all requirements");
+    //   return;
+    // }
 
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+    // // Check if passwords match
+    // if (data.password !== data.confirmPassword) {
+    //   setError("Passwords do not match");
+    //   return;
+    // }
 
     setIsSubmitting(true);
 
@@ -86,7 +103,10 @@ export default function ResetPasswordPage() {
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form
+              className="space-y-4"
+              onSubmit={handleSubmit(handlePassSubmit)}
+            >
               {/* New Password */}
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
@@ -95,8 +115,7 @@ export default function ResetPasswordPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter new password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    {...register("password")}
                     required
                   />
                   <button
@@ -182,8 +201,7 @@ export default function ResetPasswordPage() {
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    {...register("confirmPassword")}
                     required
                   />
                   <button
@@ -198,13 +216,11 @@ export default function ResetPasswordPage() {
                     )}
                   </button>
                 </div>
-                {password &&
-                  confirmPassword &&
-                  password !== confirmPassword && (
-                    <p className="text-xs text-red-500">
-                      Passwords do not match
-                    </p>
-                  )}
+                {errors?.confirmPassword && (
+                  <p className="text-xs text-red-500">
+                    {errors.confirmPassword?.message}
+                  </p>
+                )}
               </div>
 
               {error && <p className="text-sm text-red-500">{error}</p>}
@@ -214,8 +230,9 @@ export default function ResetPasswordPage() {
                 className="w-full"
                 disabled={
                   isSubmitting ||
-                  !isPasswordStrong ||
-                  password !== confirmPassword
+                  error.length > 0 ||
+                  !!errors.password ||
+                  !!errors.confirmPassword
                 }
               >
                 {isSubmitting ? "Resetting..." : "Reset Password"}

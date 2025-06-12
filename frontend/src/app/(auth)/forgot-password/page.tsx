@@ -21,7 +21,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [isResending, setIsResending] = useState(false);
-
   // Handle countdown timer
   useEffect(() => {
     if (countdown > 0) {
