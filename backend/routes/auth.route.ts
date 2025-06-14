@@ -109,8 +109,8 @@ authRouter.post("/signout", signout);
 
 authRouter.post("/check-username-unique", checkUsernameUnique);
 
-//for password reset and password reset link
-authRouter.post("/reset-password", resetPassword);
+// Password reset and forgot password
 authRouter.post("/forgot-password", forgotPassword);
+authRouter.post("/reset-password", resetPassword);
 
 export default authRouter;

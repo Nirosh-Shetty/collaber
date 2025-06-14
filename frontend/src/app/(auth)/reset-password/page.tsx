@@ -2,36 +2,41 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircleIcon, EyeIcon, EyeOffIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { resetPasswordSchema } from "@/schemas/forgotPassword.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import axios from "axios";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
 
   // const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  // const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
-
+  const [token, setToken] = useState<string | null>(null);
+  useEffect(() => {
+    setToken(searchParams.get("token"));
+  }, [searchParams]);
   const {
+    control,
     handleSubmit,
     register,
-    getValues,
-    watch,
-    formState: { errors },
+    // getValues,
+    // watch,
+    trigger,
+    formState: { isSubmitting, errors },
   } = useForm<z.infer<typeof resetPasswordSchema>>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
@@ -39,17 +44,29 @@ export default function ResetPasswordPage() {
       confirmPassword: "",
     },
   });
-  const password = watch("password");
+  // const password = watch("password");
+  const password = useWatch({ control, name: "password" });
+  // 🔁 Re-validate confirmPassword whenever password changes
+  const confirmPassTouchedRef = useRef(false);
+
+  useEffect(() => {
+    if (confirmPassTouchedRef.current) {
+      trigger("confirmPassword");
+    }
+  }, [password, trigger]);
+
   // Password strength indicators
   const hasMinLength = password.length >= 8;
   const hasLetter = /[a-zA-Z]/.test(password);
   const hasNumber = /\d/.test(password);
   const hasSpecialChar = /[^a-zA-Z0-9]/.test(password);
-  const isPasswordStrong =
-    hasMinLength && hasLetter && hasNumber && hasSpecialChar;
+  // const isPasswordStrong =
+  //   hasMinLength && hasLetter && hasNumber && hasSpecialChar;
 
-  const handlePassSubmit = (data: z.infer<typeof resetPasswordSchema>) => {
-    setError("");
+  const handlePassSubmit = async (
+    data: z.infer<typeof resetPasswordSchema>
+  ) => {
+    // setError("");
 
     // Validate password
     // if (!isPasswordStrong) {
@@ -63,14 +80,37 @@ export default function ResetPasswordPage() {
     //   return;
     // }
 
-    setIsSubmitting(true);
+    // setIsSubmitting(true);
 
     // Here you would call your API to reset the password using the token
     // For now, we'll simulate the API call with a timeout
-    setTimeout(() => {
-      setIsSubmitting(false);
+    if (!token) {
+      setError("Invalid or expired reset link. Please request a new one.");
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/reset-password`,
+        {
+          token,
+          newPassword: data.password,
+        }
+      );
       setIsSubmitted(true);
-    }, 1500);
+      setError(""); // Clear any previous errors
+    } catch (error: any) {
+      if (error.response.data?.tokenExpired) {
+        setToken("");
+        return;
+      }
+      setError(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred. Please try again later."
+      );
+      return;
+    }
   };
 
   // If no token is provided, show an error
@@ -130,7 +170,7 @@ export default function ResetPasswordPage() {
                     )}
                   </button>
                 </div>
-
+                {/* TODO: try using the zod for this password strength indicators instead of using local variables for simplicity and to avoid redudancy, if you can  */}
                 {/* Password strength indicators */}
                 <div className="space-y-2 mt-2">
                   <p className="text-xs font-medium">Password must:</p>
@@ -203,6 +243,10 @@ export default function ResetPasswordPage() {
                     placeholder="Confirm new password"
                     {...register("confirmPassword")}
                     required
+                    onBlur={() => {
+                      confirmPassTouchedRef.current = true;
+                      trigger("confirmPassword");
+                    }}
                   />
                   <button
                     type="button"
@@ -230,7 +274,7 @@ export default function ResetPasswordPage() {
                 className="w-full"
                 disabled={
                   isSubmitting ||
-                  error.length > 0 ||
+                  // error.length > 0 ||
                   !!errors.password ||
                   !!errors.confirmPassword
                 }
@@ -248,7 +292,7 @@ export default function ResetPasswordPage() {
             <p className="text-muted-foreground">
               Your password has been successfully reset.
             </p>
-            <Button className="mt-4" onClick={() => router.push("/signin")}>
+            <Button className="mt-4" onClick={() => router.replace("/signin")}>
               Sign In with New Password
             </Button>
           </div>

@@ -16,19 +16,22 @@ export const resetPassword = async (
       .json({ message: "Token and new password are required" });
   }
   try {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const email = await sessionStore.get(hashedToken);
-    if (!email) {
-      return res.status(400).json({ message: "Invalid or expired token" });
+    // const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const tokenPayload = await sessionStore.get(token);
+    if (!tokenPayload || !tokenPayload.email) {
+      // Token is invalid or expired
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired token", tokenExpired: true });
     }
-    const user = await UserModel.findOne({ email });
+    const user = await UserModel.findOne({ email: tokenPayload.email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     const hashedPassword = await bcryptjs.hash(newPassword, 10);
     user.password = hashedPassword;
     await user.save();
-    await sessionStore.delete(hashedToken); // Delete the token after use
+    await sessionStore.delete(token); // Delete the token after use
     return res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
     console.error("Error in resetPassword:", error);
