@@ -3,7 +3,7 @@ import { generateToken } from "../../utils/generateToken";
 import UserModel from "../../models/Users";
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
-import { mailer } from "../../utils/mailer";
+import { mailer } from "../../utils/mailer/index";
 import sessionStore from "../../utils/sessionStore";
 import { generateUsernameSuggestions } from "../../utils/generateUsernameSuggestions";
 import { uploadProfilePhotoToCloud } from "../../utils/uploadProfilePhotoToCloud";

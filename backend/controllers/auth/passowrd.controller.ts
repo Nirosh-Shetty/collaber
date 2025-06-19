@@ -1,8 +1,9 @@
 import bcryptjs from "bcryptjs";
 import { Request, Response } from "express";
 import UserModel from "../../models/Users";
-import { mailer } from "../../utils/mailer";
-import crypto from "crypto";
+import { mailer } from "../../utils/mailer/index";
+
+// import crypto from "crypto";
 import sessionStore from "../../utils/sessionStore";
 
 export const resetPassword = async (
@@ -32,6 +33,10 @@ export const resetPassword = async (
     user.password = hashedPassword;
     await user.save();
     await sessionStore.delete(token); // Delete the token after use
+    await sessionStore.delete(`reset_block_${user.email}`); // Clear any block for this user
+
+    //send a confirmation email
+    await mailer(user.email, user.username, undefined, "resetPassConfirmation");
     return res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
     console.error("Error in resetPassword:", error);
@@ -76,7 +81,7 @@ export const forgotPassword = async (
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
     // 5. Send email
-    await mailer(email, "Reset Your Password", resetLink, "resetPassword");
+    await mailer(user.email, user.username, resetLink, "resetPassword");
 
     return res.status(200).json({ message: "Reset email sent successfully" });
   } catch (error) {
