@@ -2,47 +2,9 @@ import bcryptjs from "bcryptjs";
 import { Request, Response } from "express";
 import UserModel from "../../models/Users";
 import { mailer } from "../../utils/mailer/index";
-
 // import crypto from "crypto";
 import sessionStore from "../../utils/sessionStore";
 
-export const resetPassword = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  const { token, newPassword } = req.body;
-  if (!token || !newPassword) {
-    return res
-      .status(400)
-      .json({ message: "Token and new password are required" });
-  }
-  try {
-    // const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const tokenPayload = await sessionStore.get(token);
-    if (!tokenPayload || !tokenPayload.email) {
-      // Token is invalid or expired
-      return res
-        .status(400)
-        .json({ message: "Invalid or expired token", tokenExpired: true });
-    }
-    const user = await UserModel.findOne({ email: tokenPayload.email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const hashedPassword = await bcryptjs.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-    await sessionStore.delete(token); // Delete the token after use
-    await sessionStore.delete(`reset_block_${user.email}`); // Clear any block for this user
-
-    //send a confirmation email
-    await mailer(user.email, user.username, undefined, "resetPassConfirmation");
-    return res.status(200).json({ message: "Password reset successfully" });
-  } catch (error) {
-    console.error("Error in resetPassword:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
 export const forgotPassword = async (
   req: Request,
   res: Response
@@ -74,7 +36,7 @@ export const forgotPassword = async (
       email: user.email,
     };
 
-    const tokenTTL = 60 * 30; // 30 minutes
+    const tokenTTL = 60 * 60; // 1 hour
     const token = await sessionStore.set(tokenPayload, tokenTTL);
 
     // 4. Generate reset link
@@ -87,5 +49,89 @@ export const forgotPassword = async (
   } catch (error) {
     console.error("Error in forgotPassword:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const resetPassword = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const { token, newPassword } = req.body;
+  const ip = req.ip;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({
+      message: "Token and new password are required",
+      errorIn: "invalid-token",
+    });
+  }
+
+  try {
+    // Rate limiting section
+    const ipKey = `reset_attempts_ip_${ip}`;
+    const tokenKey = `reset_attempts_token_${token}`;
+    const maxAttempts = 5;
+    const ttl = 15 * 60; // 15 minutes
+
+    const ipAttempts = parseInt((await sessionStore.get(ipKey)) || "0");
+    const tokenAttempts = parseInt((await sessionStore.get(tokenKey)) || "0");
+
+    if (ipAttempts >= maxAttempts || tokenAttempts >= maxAttempts) {
+      return res.status(429).json({
+        message: "Too many attempts. Please try again later.",
+        errorIn: "rate-limited",
+      });
+    }
+
+    await sessionStore.setWithKey(ipKey, (ipAttempts + 1).toString(), ttl);
+    await sessionStore.setWithKey(
+      tokenKey,
+      (tokenAttempts + 1).toString(),
+      ttl
+    );
+    //TODO: Add Account Lockout After Multiple Fails (Optional)
+    // If you notice brute-force attempts (e.g., 10+ fails per user/IP per hour), consider locking the account or requiring captcha/email verification.
+
+    // Validate token
+    const tokenPayload = await sessionStore.get(token);
+    if (!tokenPayload || !tokenPayload.email) {
+      return res.status(400).json({
+        message: "Invalid or expired token",
+        errorIn: "invalid-token",
+      });
+    }
+
+    const user = await UserModel.findOne({ email: tokenPayload.email });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        errorIn: "user-not-found",
+      });
+    }
+
+    // Hash & save new password
+    const hashedPassword = await bcryptjs.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    // Clean up
+    await sessionStore.delete(token);
+    await sessionStore.delete(`reset_block_${user.email}`);
+    await sessionStore.delete(tokenKey);
+    await sessionStore.delete(ipKey);
+
+    // Send confirmation email
+    await mailer(user.email, user.username, undefined, "resetPassConfirmation");
+
+    return res.status(200).json({
+      message: "Password reset successfully",
+      errorIn: "success",
+    });
+  } catch (error) {
+    console.error("Error in resetPassword:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      errorIn: "error",
+    });
   }
 };

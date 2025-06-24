@@ -174,7 +174,7 @@ export default function ResetPasswordResultPage() {
 
         {(status === "invalid-token" || status === "expired") && (
           <p className="text-xs text-muted-foreground">
-            Password reset links expire after 24 hours for security reasons.
+            Password reset links expire after an hour for security reasons.
           </p>
         )}
 
