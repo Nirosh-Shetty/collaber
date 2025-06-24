@@ -12,7 +12,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { resetPasswordSchema } from "@/schemas/forgotPassword.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -99,8 +99,16 @@ export default function ResetPasswordPage() {
       );
       setIsSubmitted(true);
       setError(""); // Clear any previous errors
-    } catch (error: any) {
-      if (error.response.data?.tokenExpired) {
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response === "object" &&
+        (error as any).response !== null &&
+        "data" in (error as any).response &&
+        (error as any).response.data?.tokenExpired
+      ) {
         setToken("");
         return;
       }

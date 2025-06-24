@@ -139,7 +139,9 @@ export default function ResetPasswordResultPage() {
     <div className="container max-w-md mx-auto py-10 px-4">
       <div className="text-center space-y-6">
         <div className="flex justify-center">
-          <div className={config.iconColor}>{config.icon}</div>
+          <div className={config.iconColor} aria-hidden="true">
+            {config.icon}
+          </div>
         </div>
 
         <div className="space-y-2">
