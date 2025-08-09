@@ -12,15 +12,15 @@ import {
   Building2,
   Users,
   UserCheck,
-  TrendingUp,
+  // TrendingUp,
   MessageSquare,
   FileCheck,
-  Shield,
-  Zap,
+  // Shield,
+  // Zap,
   BarChart3,
   ChevronDown,
   Sparkles,
-  Heart,
+  // Heart,
   Star,
   ArrowRight,
   Quote,
@@ -65,10 +65,10 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 border-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 ">
       {/* Navigation */}
       <nav className="border-b border-white/10 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex justify-between items-center ">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-white" />
@@ -92,7 +92,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
+      <section className="max-w-screen-2xl mx-auto px-4 py-20 text-center">
         <div className="max-w-4xl mx-auto">
           <div className="inline-flex items-center bg-purple-500/20 text-purple-300 px-4 py-2 rounded-full text-sm font-medium mb-6 border border-purple-400/30">
             🚀 The future of collaborations is here
@@ -125,7 +125,7 @@ export default function LandingPage() {
 
       {/* How It Works - 3 Roles */}
       <section className="py-20">
-        <div className="container mx-auto px-4">
+        <div className="max-w-screen-2xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
               How It Works ⚡
@@ -235,7 +235,7 @@ export default function LandingPage() {
 
       {/* Powerful Features */}
       <section className="py-20 bg-black/20">
-        <div className="container mx-auto px-4">
+        <div className="max-w-screen-2xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
               Powerful Features 🔥
@@ -299,7 +299,7 @@ export default function LandingPage() {
 
       {/* Trusted by Creators & Brands */}
       <section className="py-20">
-        <div className="container mx-auto px-4">
+        <div className="max-w-screen-2xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
               Trusted by Creators & Brands 🌟
@@ -385,7 +385,7 @@ export default function LandingPage() {
       </section>
       {/* Ready to Collab Smarter CTA */}
       <section className="py-20 bg-gradient-to-r from-purple-900/50 to-pink-900/50">
-        <div className="container mx-auto px-4 text-center">
+        <div className="max-w-screen-2xl mx-auto px-4 text-center">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Ready to Collab Smarter? 🎉
@@ -465,7 +465,7 @@ export default function LandingPage() {
 
       {/* FAQ Section */}
       <section className="py-20 bg-black/20">
-        <div className="container mx-auto px-4">
+        <div className="max-w-screen-2xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
               Got Questions? 🤷‍♀️
@@ -515,7 +515,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-black/40 border-t border-white/10">
-        <div className="container mx-auto px-4 py-12">
+        <div className="max-w-screen-2xl mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
