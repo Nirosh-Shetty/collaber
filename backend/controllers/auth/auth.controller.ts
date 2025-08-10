@@ -332,7 +332,7 @@ export const completeSocialAuth = async (
       });
       return res.status(400).json({
         message: "fromProvider is required",
-        redirectTo: "/signup/select-role",
+        redirectTo: "/signup/role",
       });
     }
     if (!role) {
@@ -343,7 +343,7 @@ export const completeSocialAuth = async (
       });
       return res.status(400).json({
         message: "Role is required",
-        redirectTo: "/signup/select-role",
+        redirectTo: "/signup/role",
       });
     }
     const sessionId = req.cookies.sessionId;
@@ -351,7 +351,7 @@ export const completeSocialAuth = async (
     if (!sessionData) {
       return res.status(400).json({
         message: "Session expired or invalid. Please try signing up again.",
-        redirectTo: "/signup/select-role",
+        redirectTo: "/signup/role",
       });
     }
 
@@ -367,13 +367,13 @@ export const completeSocialAuth = async (
     if (!email || !name || !provider) {
       return res.status(400).json({
         message: "Incomplete session data. Please try signing up again.",
-        redirectTo: "/signup/select-role",
+        redirectTo: "/signup/role",
       });
     }
     if (fromProvider !== provider) {
       return res.status(400).json({
         message: "Invalid provider",
-        redirectTo: "/signup/select-role",
+        redirectTo: "/signup/role",
       });
     }
 

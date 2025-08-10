@@ -11,7 +11,7 @@ export function middleware(req: NextRequest) {
   }
 
   // Logged in and trying to access signin/signup => redirect to dashboard
-  if (token && (pathname === "/signin" || pathname === "/signup/select-role")) {
+  if (token && (pathname === "/signin" || pathname === "/signup/role")) {
     console.log("loggin alreawdy ");
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }

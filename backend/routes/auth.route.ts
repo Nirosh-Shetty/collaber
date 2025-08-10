@@ -35,7 +35,7 @@ authRouter.get("/google", (req, res, next): any => {
 authRouter.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${process.env.FRONTEND_URL}/signup/select-role`,
+    failureRedirect: `${process.env.FRONTEND_URL}/signup/role`,
     session: false,
   }),
   async (req: Request, res: Response): Promise<void> => {

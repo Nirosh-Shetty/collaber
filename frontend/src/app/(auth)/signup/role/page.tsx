@@ -55,8 +55,8 @@ export default function SelectRolePage() {
         //TODO: can give a popup saying the error and click ok to redirect
         if (error.response.data.status === 500)
           //TODO: give a popup istaed of this
-          router.replace(`/signup/select-role?fromProvider=${fromProvider}`);
-        router.replace("/signup/select-role");
+          router.replace(`/signup/role?fromProvider=${fromProvider}`);
+        router.replace("/signup/role");
       }
     }
 
@@ -64,8 +64,13 @@ export default function SelectRolePage() {
     // sessionStorage.setItem("selectedRole", selectedRole);
 
     // Navigate to the basic info page
-    else router.push(`/signup/basic-info?role=${selectedRole}`);
-    setIsSubmitting(false);
+    else {
+      sessionStorage.setItem("selectedRole", selectedRole);
+      // router.push(`/signup/basic-info?role=${selectedRole}`);
+      // setIsSubmitting(false);
+      router.push(`/signup/username`);
+      setIsSubmitting(false);
+    }
   };
 
   return (
