@@ -398,7 +398,7 @@ export default function LandingPage() {
 
             {/* Three Role Options */}
             <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-8">
-              <Link href="/signup/role" className="group">
+              <Link href="/signup/basic-info?role=brand" className="group">
                 <Card className="bg-gradient-to-br from-blue-900/50 to-blue-800/50 border-blue-400/30 backdrop-blur-sm hover:scale-105 transition-all duration-300 cursor-pointer">
                   <CardContent className="p-8 text-center">
                     <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:rotate-12 transition-transform">
@@ -417,7 +417,7 @@ export default function LandingPage() {
                 </Card>
               </Link>
 
-              <Link href="/signup/role" className="group">
+              <Link href="/signup/basic-info?role=influencer" className="group">
                 <Card className="bg-gradient-to-br from-purple-900/50 to-pink-800/50 border-purple-400/30 backdrop-blur-sm hover:scale-105 transition-all duration-300 cursor-pointer">
                   <CardContent className="p-8 text-center">
                     <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:rotate-12 transition-transform">
@@ -436,7 +436,7 @@ export default function LandingPage() {
                 </Card>
               </Link>
 
-              <Link href="/signup/role" className="group">
+              <Link href="/signup/basic-info?role=manager" className="group">
                 <Card className="bg-gradient-to-br from-green-900/50 to-emerald-800/50 border-green-400/30 backdrop-blur-sm hover:scale-105 transition-all duration-300 cursor-pointer">
                   <CardContent className="p-8 text-center">
                     <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:rotate-12 transition-transform">
@@ -596,7 +596,7 @@ export default function LandingPage() {
 
           <div className="border-t border-white/10 mt-12 pt-8 text-center text-gray-400">
             <p>
-              &copy; 2024 Collaber. All rights reserved. Made with lots of ☕
+              &copy; 2025 Collaber. All rights reserved. Made with lots of ☕
               and 💜
             </p>
           </div>

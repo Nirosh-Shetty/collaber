@@ -32,7 +32,7 @@ export default function SelectRolePage() {
   const subText = fromProvider
     ? "Before we set up your profile, tell us how you’ll use the platform."
     : "First, let's understand how you'll be using our platform. Select the role that best describes you.";
-  const step = fromProvider ? "Step 1 of 1" : "Step 1 of 2";
+  const step = fromProvider ? "Step 1 of 2" : "Step 1 of 2";
 
   const handleContinue = async () => {
     if (!selectedRole) return;
@@ -68,7 +68,7 @@ export default function SelectRolePage() {
       sessionStorage.setItem("selectedRole", selectedRole);
       // router.push(`/signup/basic-info?role=${selectedRole}`);
       // setIsSubmitting(false);
-      router.push(`/signup/username`);
+      router.push(`/signup/basic-info?role=${selectedRole}`);
       setIsSubmitting(false);
     }
   };

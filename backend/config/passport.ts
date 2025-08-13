@@ -62,7 +62,7 @@ passport.use(
             });
 
             return (req.res as ExpressResponse).redirect(
-              `${process.env.FRONTEND_URL}/signup/select-role?fromProvider=google`
+              `${process.env.FRONTEND_URL}/signup/role?fromProvider=google`
             );
           }
 
@@ -202,7 +202,7 @@ passport.use(
             });
 
             return (req.res as ExpressResponse).redirect(
-              `${process.env.FRONTEND_URL}/signup/select-role?fromProvider=facebook`
+              `${process.env.FRONTEND_URL}/signup/role?fromProvider=facebook`
             );
           }
 

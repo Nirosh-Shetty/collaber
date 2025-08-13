@@ -110,7 +110,7 @@ export default function SignupPage() {
     // const role = sessionStorage.getItem("selectedRole");
     sessionStorage.removeItem("signupData");
     if (!role) {
-      router.replace("/signup/select-role");
+      router.replace("/signup/role");
     } else {
       setValue("role", role as "influencer" | "brand" | "manager");
     }
@@ -189,7 +189,7 @@ export default function SignupPage() {
   return (
     <div className="container max-w-md mx-auto py-10 px-4 space-y-6">
       <Link
-        href="/signup/select-role"
+        href="/signup/role"
         className="flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeftIcon className="mr-2 h-4 w-4" />
