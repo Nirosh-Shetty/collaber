@@ -27,7 +27,12 @@ authRouter.get("/google", (req, res, next): any => {
   //   return res.status(400).json({ message: "Missing or invalid role" });
   // }
   passport.authenticate("google", {
-    scope: ["profile", "email"],
+    scope: [
+      "profile",
+      "email",
+      // "https://www.googleapis.com/auth/youtube.readonly",
+      // "https://www.googleapis.com/auth/yt-analytics.readonly",
+    ],
     state: role as string,
   })(req, res, next);
 });
@@ -71,7 +76,7 @@ authRouter.get("/facebook", (req, res, next) => {
 authRouter.get(
   "/facebook/callback",
   passport.authenticate("facebook", {
-    failureRedirect: "/login",
+    failureRedirect: `${process.env.FRONTEND_URL}/signup/role`, // Match Google
     session: false,
   }),
   (req: Request, res: Response): any => {
@@ -81,15 +86,13 @@ authRouter.get(
       return res.status(401).json({ message: "Authentication failed" });
     }
 
-    // const safeUser = user as { _id: string; email: string };
-
-    const token = generateToken(user._id.toString(), user.role);
+    const token = generateToken(user.id.toString(), user.role);
 
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 5 * 24 * 60 * 60 * 1000,
-      sameSite: "strict",
+      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
+      sameSite: "lax", // Match Google
     });
 
     res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
