@@ -69,7 +69,13 @@ authRouter.get("/facebook", (req, res, next) => {
   const { role } = req.query;
 
   passport.authenticate("facebook", {
-    scope: ["email"],
+    scope: [
+      "email",
+      // "pages_show_list",
+      // "pages_read_engagement",
+      // "instagram_basic",
+      // "instagram_manage_insights",
+    ],
     state: role as string,
   })(req, res, next);
 });

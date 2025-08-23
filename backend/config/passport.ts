@@ -194,6 +194,7 @@ passport.use(
       done: VerifyCallback
     ) => {
       try {
+        console.log("access token", accessToken);
         const role = req.query?.state as string;
         const email = profile.emails?.[0]?.value;
         if (!email) {
