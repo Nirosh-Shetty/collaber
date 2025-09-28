@@ -9,7 +9,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { forgotPasswordSchema } from "@/schemas/forgotPassword.schema";
+import { forgotPasswordSchema } from "@/schemas/forgot&resetPassword.schema";
 import type { z } from "zod";
 import axios from "axios";
 

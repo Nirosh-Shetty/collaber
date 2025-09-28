@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
-import { resetPasswordSchema } from "@/schemas/forgotPassword.schema";
+import { resetPasswordSchema } from "@/schemas/forgot&resetPassword.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";

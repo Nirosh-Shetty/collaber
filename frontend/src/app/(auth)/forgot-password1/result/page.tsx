@@ -1,38 +1,38 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircleIcon } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { CheckCircleIcon } from "lucide-react";
 
 export default function ForgotPassword1ResultPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [countdown, setCountdown] = useState(60)
-  const [isResending, setIsResending] = useState(false)
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [countdown, setCountdown] = useState(60);
+  const [isResending, setIsResending] = useState(false);
 
   // Get email from sessionStorage on component mount
   useEffect(() => {
-    const resetEmail = sessionStorage.getItem("resetEmail")
+    const resetEmail = sessionStorage.getItem("resetEmail");
     if (!resetEmail) {
       // If no email found, redirect back to forgot password
-      router.push("/forgot-password1")
-      return
+      router.push("/forgot-password1");
+      return;
     }
-    setEmail(resetEmail)
-  }, [router])
+    setEmail(resetEmail);
+  }, [router]);
 
   // Handle countdown timer
   useEffect(() => {
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
     }
-  }, [countdown])
+  }, [countdown]);
 
   const handleResend = async () => {
-    setIsResending(true)
+    setIsResending(true);
 
     try {
       // Here you would call your API to resend the reset email
@@ -40,20 +40,20 @@ export default function ForgotPassword1ResultPage() {
 
       // Simulate API call
       setTimeout(() => {
-        setIsResending(false)
-        setCountdown(60) // Start 60 second countdown
-      }, 1000)
+        setIsResending(false);
+        setCountdown(60); // Start 60 second countdown
+      }, 1000);
     } catch (error) {
-      setIsResending(false)
+      setIsResending(false);
       // Handle error
     }
-  }
+  };
 
   const handleEditEmail = () => {
     // Clear the stored email and go back to form
-    sessionStorage.removeItem("resetEmail")
-    router.push("/forgot-password1")
-  }
+    sessionStorage.removeItem("resetEmail");
+    router.push("/forgot-password1");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center p-4">
@@ -67,9 +67,13 @@ export default function ForgotPassword1ResultPage() {
               </div>
 
               <div>
-                <h2 className="text-xl font-bold text-white mb-2">Check Your Email</h2>
+                <h2 className="text-xl font-bold text-white mb-2">
+                  Check Your Email
+                </h2>
                 <div className="space-y-2">
-                  <p className="text-gray-300 text-sm">We've sent a password reset link to</p>
+                  <p className="text-gray-300 text-sm">
+                    We've sent a password reset link to
+                  </p>
                   <div className="flex items-center justify-center gap-2">
                     <span className="font-medium text-white">{email}</span>
                     <button
@@ -81,7 +85,9 @@ export default function ForgotPassword1ResultPage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-gray-400 text-xs mt-4">If you don't see the email, check your spam folder</p>
+                <p className="text-gray-400 text-xs mt-4">
+                  If you don't see the email, check your spam folder
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -93,9 +99,13 @@ export default function ForgotPassword1ResultPage() {
                 </Button>
 
                 <div className="text-center">
-                  <p className="text-gray-400 text-sm mb-2">Didn't receive the email?</p>
+                  <p className="text-gray-400 text-sm mb-2">
+                    Didn't receive the email?
+                  </p>
                   {countdown > 0 ? (
-                    <p className="text-gray-400 text-sm">Resend in {countdown}s</p>
+                    <p className="text-gray-400 text-sm">
+                      Resend in {countdown}s
+                    </p>
                   ) : (
                     <button
                       type="button"
@@ -113,5 +123,5 @@ export default function ForgotPassword1ResultPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

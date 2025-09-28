@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { EyeIcon, EyeOffIcon, ShieldCheckIcon } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { resetPasswordSchema } from "@/schemas/forgotPassword.schema";
+import { resetPasswordSchema } from "@/schemas/forgot&resetPassword.schema";
 import { z } from "zod";
 import axios from "axios";
 

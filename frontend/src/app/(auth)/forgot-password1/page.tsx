@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ArrowLeftIcon, MailIcon } from "lucide-react"
-import Link from "next/link"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { forgotPasswordSchema } from "@/schemas/forgotPassword.schema"
-import type { z } from "zod"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeftIcon, MailIcon } from "lucide-react";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { forgotPasswordSchema } from "@/schemas/forgot&resetPassword.schema";
+import type { z } from "zod";
 
 export default function ForgotPassword1Page() {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const {
     handleSubmit,
@@ -25,37 +25,39 @@ export default function ForgotPassword1Page() {
     formState: { errors },
   } = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),
-  })
+  });
 
   // Handle forgot password submission
-  const handleForgotPasswordSubmit = async (data: z.infer<typeof forgotPasswordSchema>) => {
-    setError("")
+  const handleForgotPasswordSubmit = async (
+    data: z.infer<typeof forgotPasswordSchema>
+  ) => {
+    setError("");
     if (!data.email) {
-      setError("Please enter your email address")
-      return
+      setError("Please enter your email address");
+      return;
     }
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // Simulate API call
       setTimeout(() => {
-        setIsSubmitting(false)
+        setIsSubmitting(false);
 
         // Store email in sessionStorage for the result page
-        sessionStorage.setItem("resetEmail", data.email)
+        sessionStorage.setItem("resetEmail", data.email);
 
         // Redirect to result page
-        router.push("/forgot-password1/result")
-      }, 1500)
+        router.push("/forgot-password1/result");
+      }, 1500);
     } catch (error) {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
       if (error instanceof Error) {
-        setError(error.message)
+        setError(error.message);
       } else {
-        setError("An unexpected error occurred. Please try again later.")
+        setError("An unexpected error occurred. Please try again later.");
       }
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center p-4">
@@ -69,7 +71,9 @@ export default function ForgotPassword1Page() {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-white">Reset Password</h1>
-                <p className="text-sm text-gray-400">We'll send you a reset link</p>
+                <p className="text-sm text-gray-400">
+                  We&apos;ll send you a reset link
+                </p>
               </div>
             </div>
 
@@ -78,10 +82,16 @@ export default function ForgotPassword1Page() {
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MailIcon className="h-8 w-8 text-white" />
               </div>
-              <p className="text-gray-300 text-sm">Enter your email and we'll send you a link to reset your password</p>
+              <p className="text-gray-300 text-sm">
+                Enter your email and we&apos;ll send you a link to reset your
+                password
+              </p>
             </div>
 
-            <form className="space-y-6" onSubmit={handleSubmit(handleForgotPasswordSubmit)}>
+            <form
+              className="space-y-6"
+              onSubmit={handleSubmit(handleForgotPasswordSubmit)}
+            >
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white">
                   Email Address
@@ -100,7 +110,9 @@ export default function ForgotPassword1Page() {
                 ) : error ? (
                   <p className="text-red-400 text-xs">{error}</p>
                 ) : (
-                  <p className="text-gray-400 text-xs">Enter the email associated with your account</p>
+                  <p className="text-gray-400 text-xs">
+                    Enter the email associated with your account
+                  </p>
                 )}
               </div>
 
@@ -116,5 +128,5 @@ export default function ForgotPassword1Page() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
