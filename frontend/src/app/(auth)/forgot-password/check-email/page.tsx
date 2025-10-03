@@ -77,7 +77,7 @@ export default function CheckEmailPage() {
             </p>
             <div className="flex items-center justify-center gap-2">
               <span className="font-medium text-foreground">{email}</span>
-              <Link
+              <Link 
                 href="/forgot-password"
                 className="text-xs text-purple-400 hover:text-purple-300 underline"
               >

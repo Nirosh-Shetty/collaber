@@ -16,13 +16,12 @@ export const forgotPassword = async (
   }
 
   try {
-    // 1. Find user
     const user = await UserModel.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // 2. Optional: Rate-limit resend attempts (30 seconds)
+    // Optional: Rate-limit resend attempts (30 seconds)
     const blockKey = `reset_block_${email}`;
     const isBlocked = await sessionStore.get(blockKey);
     if (isBlocked) {
@@ -30,7 +29,7 @@ export const forgotPassword = async (
     }
     await sessionStore.setWithKey(blockKey, "1", 60); // block next request for 1 minute
 
-    // 3. Store reset info in Redis session store
+    // Store reset info in Redis session store
     const tokenPayload = {
       userId: user._id,
       email: user.email,
@@ -39,10 +38,10 @@ export const forgotPassword = async (
     const tokenTTL = 60 * 60; // 1 hour
     const token = await sessionStore.set(tokenPayload, tokenTTL);
 
-    // 4. Generate reset link
+    //Generate reset link
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
-    // 5. Send email
+    //Send email
     await mailer(user.email, user.username, resetLink, "resetPassword");
 
     return res.status(200).json({ message: "Reset email sent successfully" });
