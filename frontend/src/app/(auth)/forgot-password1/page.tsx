@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,13 +22,11 @@ export default function ForgotPassword1Page() {
   const {
     handleSubmit,
     register,
-    getValues,
     formState: { errors },
   } = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  // Handle forgot password submission
   const handleForgotPasswordSubmit = async (
     data: z.infer<typeof forgotPasswordSchema>
   ) => {
@@ -39,23 +38,27 @@ export default function ForgotPassword1Page() {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      setTimeout(() => {
-        setIsSubmitting(false);
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/forgot-password`,
+        { email: data.email },
+        { withCredentials: true }
+      );
 
-        // Store email in sessionStorage for the result page
-        sessionStorage.setItem("resetEmail", data.email);
+      // keep email for result page fallback
+      sessionStorage.setItem("resetEmail", data.email);
 
-        // Redirect to result page
-        router.push("/forgot-password1/result");
-      }, 1500);
-    } catch (error) {
-      setIsSubmitting(false);
-      if (error instanceof Error) {
-        setError(error.message);
+      // preferred: pass email in query so result page doesn't rely on sessionStorage
+      router.push(
+        `/forgot-password1/result?email=${encodeURIComponent(data.email)}`
+      );
+    } catch (err: any) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Failed to send reset link");
       } else {
         setError("An unexpected error occurred. Please try again later.");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
