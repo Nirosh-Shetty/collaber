@@ -5,9 +5,9 @@ import { JwtPayload } from "jsonwebtoken";
 declare global {
   namespace Express {
     interface User extends JwtPayload {
-      id: string;
-      email: string;
-      role?: string;
+      uid: string;
+      username?:string,
+      role: "influencer" | "brand" | "manager";
     }
   }
 }
