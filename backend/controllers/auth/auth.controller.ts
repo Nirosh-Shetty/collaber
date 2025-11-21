@@ -58,19 +58,28 @@ export const signUpBasicInfo = async (
     // ✅ Now create a new temp user
     const hashedPass = await bcryptjs.hash(password, 10);
 
+
     await UserModel.create({
       name,
       email,
       username,
       password: hashedPass,
       role,
-      authProvider: "local",
+      avatar: undefined, // can be set later
       isVerified: false,
       isTempAccount: true,
       reservationExpiresAt: new Date(
         Date.now() +
-          (Number(process.env.USER_RESERVATION_EXPIRY_MS) || 60 * 60 * 1000)
+        (Number(process.env.USER_RESERVATION_EXPIRY_MS) || 60 * 60 * 1000)
       ),
+      oauthProviders: [],
+      isPremium: false,
+      jwtVersion: 0,
+      statsConnection: {},
+      // influencerProfile: {},
+      // brandProfile: {},
+      // managerProfile: {},
+      loginHistory: [],
     });
 
     return res.status(201).json({
@@ -104,9 +113,10 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
       orQuery.push({ phone: Number(identifier) });
     }
 
+
     const user = await UserModel.findOne({
       $or: orQuery,
-    }).select("+password");
+    }).select("+password") as import("../../types/user").IUser | null;
 
     if (
       !user ||
@@ -157,11 +167,11 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
       time: new Date(),
     };
     // Update login history
-    user.loginHistory.push(loginEvent);
+    user?.loginHistory?.push(loginEvent);
 
     await user.save();
 
-    const token = generateToken(user._id.toString(), user.role);
+    const token = generateToken(user._id.toString(), user.role, user?.username);
 
     res.cookie("auth_token", token, {
       httpOnly: true,
@@ -190,7 +200,6 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
   //TODO: rate limit otp request per hour/day
   try {
     const { email } = req.body;
-    // console.log(req.body, "sfnsdkjfnsdfjks");
     if (!email) {
       return res.status(400).json({
         message: "Cannot find the email. Please signup again.",
@@ -198,7 +207,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
       });
     }
     // Check if the user exists and is a temp account
-    const user = await UserModel.findOne({ email }).lean();
+    const user = await UserModel.findOne({ email }).lean() as import("../../types/user").IUser | null;
     if (!user) {
       return res.status(400).json({
         message: "User not found. You need to signup again",
@@ -228,8 +237,6 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     ) {
       return res.status(400).json({
         message: "OTP already sent",
-        // countdown:
-        //   60 - Math.floor((Date.now() - user.lastOtpSentAt.getTime()) / 1000),
         lastOtpSentAt: user.lastOtpSentAt,
       });
     }
@@ -303,7 +310,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
 
     await user.save();
 
-    const token = generateToken(user._id.toString(), user.role);
+    const token = generateToken(user._id.toString(), user.role, user?.username);
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -361,8 +368,10 @@ export const completeSocialAuth = async (
       name,
       provider,
       profilePictureUrl = "",
-      googleId = null,
-      facebookId = null,
+      providerUserId = null,
+      accessToken = null,
+      refreshToken = null,
+      accessTokenExpires = null,
     } = sessionData;
     if (!email || !name || !provider) {
       return res.status(400).json({
@@ -389,38 +398,38 @@ export const completeSocialAuth = async (
       email.split("@")[0],
       1
     );
-    let uploadedPictureUrl = "";
+    let uploadedAvatarUrl = "";
     if (profilePictureUrl) {
       try {
-        uploadedPictureUrl = await uploadProfilePhotoToCloud(
+        uploadedAvatarUrl = await uploadProfilePhotoToCloud(
           profilePictureUrl,
           "profile-pictures"
         );
       } catch (uploadErr) {
-        console.error("Profile picture upload failed:", uploadErr);
-        uploadedPictureUrl = "";
+        console.error("Avatar upload failed:", uploadErr);
+        uploadedAvatarUrl = "";
       }
     }
+    const oauthProvider = {
+      provider,
+      providerUserId,
+      accessToken,
+      refreshToken,
+      accessTokenExpires,
+    };
     const newUser = new UserModel({
       name,
       email,
       username: usernameSuggested[0],
-      linkedAccounts: [provider],
-      // profilePicture: profile.photos?.[0].value,
-      // password: "GOOGLE_AUTH", // placeholder or null
+      avatar: uploadedAvatarUrl,
       role,
-      profilePicture: uploadedPictureUrl,
+      oauthProviders: [oauthProvider],
       isVerified: true,
       isTempAccount: false,
     });
-    if (provider === "google") {
-      newUser.googleId = googleId;
-    } else if (provider === "facebook") {
-      newUser.facebookId = facebookId;
-    }
 
     await newUser.save();
-    const token = generateToken(newUser._id.toString(), newUser.role);
+    const token = generateToken(newUser._id.toString(), newUser.role, newUser?.username);
     // Clear the session cookie
     await sessionStore.delete(sessionId);
     // Clear the session cookie and set auth_token cookie
