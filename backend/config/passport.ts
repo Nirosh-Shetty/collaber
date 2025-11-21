@@ -1,18 +1,146 @@
-// config/passport.ts or wherever you're setting strategies
+// config/passport.ts
 import passport from "passport";
 import {
   Strategy as GoogleStrategy,
   VerifyCallback,
 } from "passport-google-oauth20";
 import { Strategy as FacebookStrategy } from "passport-facebook";
-import UserModel from "../models/Users"; // Your user model
+import UserModel from "../models/Users";
 import dotenv from "dotenv";
 import { Request, Response as ExpressResponse } from "express";
 import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
 import sessionStore from "../utils/sessionStore";
 import { uploadProfilePhotoToCloud } from "../utils/uploadProfilePhotoToCloud";
-// import { google } from "googleapis";
 dotenv.config();
+
+async function handleSocialAuth({
+  req,
+  profile,
+  accessToken,
+  refreshToken,
+  provider,
+}: {
+  req: Request;
+  profile: any;
+  accessToken: string;
+  refreshToken: string;
+  provider: "google" | "facebook";
+}) {
+  const role = req.query?.state as string | undefined;
+  const email = profile.emails?.[0]?.value;
+  if (!email) throw new Error("Email missing from social profile");
+
+  let user = await UserModel.findOne({ email });
+
+  const ip =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    req.ip ||
+    "unknown";
+  const loginEvent = {
+    ip,
+    userAgent: req.get("User-Agent") || "unknown",
+    time: new Date(),
+  };
+
+  if (!user) {
+    if (!role || !["influencer", "brand", "manager"].includes(role)) {
+      const basicProfile = {
+        name:
+          profile.displayName ||
+          `${profile.name?.givenName || ""} ${profile.name?.familyName || ""}`.trim(),
+        email,
+        provider,
+        profilePictureUrl: profile.photos?.[0]?.value,
+        providerUserId: profile.id,
+      };
+
+      const sessionId = await sessionStore.set(basicProfile, 5 * 60);
+      (req.res as ExpressResponse).cookie("sessionId", sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 10 * 60 * 1000,
+      });
+
+      (req.res as ExpressResponse).redirect(
+        `${process.env.FRONTEND_URL}/signup/role?fromProvider=${provider}`
+      );
+      return null;
+    }
+
+    const usernameSuggested = await generateUsernameSuggestions(
+      (email || "user").split("@")[0],
+      1
+    );
+
+    const profilePictureUrl = profile.photos?.[0]?.value;
+    let uploadedPictureUrl = "";
+    if (profilePictureUrl) {
+      try {
+        uploadedPictureUrl = await uploadProfilePhotoToCloud(
+          profilePictureUrl,
+          "profile-pictures"
+        );
+      } catch (uploadErr) {
+        console.error("Profile picture upload failed:", uploadErr);
+        uploadedPictureUrl = "";
+      }
+    }
+
+    user = new UserModel({
+      name:
+        profile.displayName ||
+        `${profile.name?.givenName || ""} ${profile.name?.familyName || ""}`.trim(),
+      email,
+      username: usernameSuggested[0],
+      role,
+      avatar: uploadedPictureUrl,
+      oauthProviders: [
+        {
+          provider,
+          providerUserId: profile.id,
+          accessToken,
+          refreshToken,
+        },
+      ],
+      isVerified: true,
+      isTempAccount: false,
+      loginHistory: [loginEvent],
+    });
+
+    await user.save();
+    return user;
+  }
+
+  user.oauthProviders = user.oauthProviders || [];
+  const existing = user.oauthProviders.find((p: any) => p.provider === provider);
+  if (!existing) {
+    user.oauthProviders.push({
+      provider,
+      providerUserId: profile.id,
+      accessToken,
+      refreshToken,
+    });
+  } else {
+    existing.providerUserId = profile.id;
+    existing.accessToken = accessToken;
+    existing.refreshToken = refreshToken;
+  }
+
+  if (!user.avatar && profile.photos?.[0]?.value) {
+    const profilePictureUrl = profile.photos?.[0]?.value;
+    try {
+      const uploaded = await uploadProfilePhotoToCloud(profilePictureUrl, "profile-pictures");
+      if (uploaded) user.avatar = uploaded;
+    } catch (err) {
+      console.error("Profile picture upload failed:", err);
+    }
+  }
+
+  user.loginHistory = user.loginHistory || [];
+  user.loginHistory.push(loginEvent);
+  await user.save();
+  return user;
+}
 
 passport.use(
   new GoogleStrategy(
@@ -30,142 +158,18 @@ passport.use(
       done: VerifyCallback
     ) => {
       try {
-        const role = req.query?.state as string;
-        const email = profile.emails?.[0]?.value;
-        if (!email) return done(null, false, { message: "Email missing" });
-
-        let user = await UserModel.findOne({ email });
-        const ip =
-          (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-          req.ip ||
-          "unknown";
-        const loginEvent = {
-          ip,
-          userAgent: req.get("User-Agent") || "unknown",
-          time: new Date(),
-        };
-        if (!user) {
-          if (!role || !["influencer", "brand", "manager"].includes(role)) {
-            // If no role is provided, redirect to select role page
-            const basicProfile = {
-              name: profile.displayName,
-              email,
-              provider: "google",
-              profilePictureUrl: profile.photos?.[0]?.value,
-              googleId: profile.id,
-            };
-
-            const sessionId = await sessionStore.set(basicProfile, 5 * 60);
-            (req.res as ExpressResponse).cookie("sessionId", sessionId, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              maxAge: 10 * 60 * 1000,
-            });
-
-            return (req.res as ExpressResponse).redirect(
-              `${process.env.FRONTEND_URL}/signup/role?fromProvider=google`
-            );
-          }
-
-          const usernameSuggested = await generateUsernameSuggestions(
-            email.split("@")[0],
-            1
-          );
-          const profilePictureUrl = profile.photos?.[0]?.value;
-          // console.log(profilePictureUrl);
-          let uploadedPictureUrl = "";
-          if (profilePictureUrl) {
-            try {
-              uploadedPictureUrl = await uploadProfilePhotoToCloud(
-                profilePictureUrl,
-                "profile-pictures"
-              );
-            } catch (uploadErr) {
-              console.error("Profile picture upload failed:", uploadErr);
-              uploadedPictureUrl = "";
-            }
-          }
-
-          user = new UserModel({
-            name: profile.displayName,
-            email,
-            username: usernameSuggested[0],
-            role,
-            googleId: profile.id,
-            isVerified: true,
-            isTempAccount: false,
-            linkedAccounts: ["google"],
-            profilePicture: uploadedPictureUrl,
-            loginHistory: [loginEvent],
-          });
-
-          await user.save();
-        } else {
-          // Add "google" to linkedAccounts if not already present
-          if (!user.linkedAccounts) {
-            user.linkedAccounts = [];
-          }
-          if (!user.linkedAccounts.includes("google")) {
-            user.linkedAccounts.push("google");
-          }
-
-          if (!user.googleId) user.googleId = profile.id;
-          if (!user.profilePicture && profile.photos?.[0]?.value) {
-            const profilePictureUrl = profile.photos?.[0]?.value;
-            console.log(profilePictureUrl);
-            let uploadedPictureUrl = "";
-            if (profilePictureUrl) {
-              try {
-                uploadedPictureUrl = await uploadProfilePhotoToCloud(
-                  profilePictureUrl,
-                  "profile-pictures"
-                );
-              } catch (uploadErr) {
-                console.error("Profile picture upload failed:", uploadErr);
-                uploadedPictureUrl = "";
-              }
-            }
-
-            user.profilePicture = uploadedPictureUrl;
-          }
-          user.loginHistory.push(loginEvent);
-
-          await user.save();
-        }
-
-        // const oauth2Client = new google.auth.OAuth2();
-        // oauth2Client.setCredentials({
-        //   access_token: accessToken,
-        //   refresh_token: refreshToken,
-        // });
-
-        // const youtubeAnalytics = google.youtubeAnalytics("v2");
-        // const response = await youtubeAnalytics.reports.query({
-        //   auth: oauth2Client,
-        //   ids: "channel==MINE",
-        //   startDate: "2023-01-01",
-        //   endDate: "2023-12-31",
-        //   metrics: "views,likes,subscribersGained",
-        // });
-        // console.log(JSON.stringify(response.data, null, 2));
-        // const { columnHeaders, rows } = response.data;
-
-        // console.log(
-        //   "Columns:",
-        //   columnHeaders.map((c) => c.name)
-        // );
-        // console.log("Data:", rows);
-
+        const user = await handleSocialAuth({ req, profile, accessToken, refreshToken, provider: "google" });
+        if (user === null) return; // redirect already handled
         return done(null, {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
           username: user.username,
           role: user.role,
-        });
+        } as any);
       } catch (err) {
         console.error("Google strategy error:", err);
-        return done(err, undefined);
+        return done(err as any, undefined);
       }
     }
   )
@@ -177,13 +181,7 @@ passport.use(
       clientID: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       callbackURL: `${process.env.BACKEND_URL}/api/auth/facebook/callback`,
-      profileFields: [
-        "id",
-        "emails",
-        "name",
-        "displayName",
-        "picture.type(large)",
-      ],
+      profileFields: ["id", "emails", "name", "displayName", "picture.type(large)"],
       passReqToCallback: true,
     },
     async (
@@ -194,132 +192,18 @@ passport.use(
       done: VerifyCallback
     ) => {
       try {
-        console.log("access token", accessToken);
-        const role = req.query?.state as string;
-        const email = profile.emails?.[0]?.value;
-        if (!email) {
-          return done(null, false, {
-            message: "Email not found in Facebook profile.",
-          });
-        }
-
-        let user = await UserModel.findOne({ email });
-        const ip =
-          (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-          req.ip ||
-          "unknown";
-        const loginEvent = {
-          ip,
-          userAgent: req.get("User-Agent") || "unknown",
-          time: new Date(),
-        };
-
-        // If user does not exist, check for role and redirect if missing
-        if (!user) {
-          if (!role || !["influencer", "brand", "manager"].includes(role)) {
-            // Prepare minimal profile for session storage
-            const basicProfile = {
-              name:
-                profile.displayName ||
-                `${profile.name?.givenName || ""} ${
-                  profile.name?.familyName || ""
-                }`.trim(),
-              email,
-              provider: "facebook",
-              profilePictureUrl: profile.photos?.[0]?.value,
-              facebookId: profile.id,
-            };
-
-            const sessionId = await sessionStore.set(basicProfile, 5 * 60);
-            (req.res as ExpressResponse).cookie("sessionId", sessionId, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              maxAge: 10 * 60 * 1000,
-            });
-
-            // Return immediately after redirecting!
-            return (req.res as ExpressResponse).redirect(
-              `${process.env.FRONTEND_URL}/signup/role?fromProvider=facebook`
-            );
-          }
-
-          // Generate username and upload profile picture if needed
-          const usernameSuggested = await generateUsernameSuggestions(
-            email.split("@")[0],
-            1
-          );
-          const profilePictureUrl = profile.photos?.[0]?.value;
-          let uploadedPictureUrl = "";
-          if (profilePictureUrl) {
-            try {
-              uploadedPictureUrl = await uploadProfilePhotoToCloud(
-                profilePictureUrl,
-                "profile-pictures"
-              );
-            } catch (uploadErr) {
-              console.error("Profile picture upload failed:", uploadErr);
-              uploadedPictureUrl = "";
-            }
-          }
-
-          user = new UserModel({
-            name:
-              profile.displayName ||
-              `${profile.name?.givenName || ""} ${
-                profile.name?.familyName || ""
-              }`.trim(),
-            email,
-            username: usernameSuggested[0],
-            facebookId: profile.id,
-            role,
-            isVerified: true,
-            isTempAccount: false,
-            linkedAccounts: ["facebook"],
-            profilePicture: uploadedPictureUrl,
-            loginHistory: [loginEvent],
-          });
-
-          await user.save();
-        } else {
-          // Existing user: update linked accounts and profile picture if needed
-          if (!user.linkedAccounts) {
-            user.linkedAccounts = [];
-          }
-
-          if (!user.linkedAccounts.includes("facebook")) {
-            user.linkedAccounts.push("facebook");
-          }
-
-          if (!user.facebookId) user.facebookId = profile.id;
-          if (!user.profilePicture && profile.photos?.[0]?.value) {
-            const profilePictureUrl = profile.photos?.[0]?.value;
-            let uploadedPictureUrl = "";
-            if (profilePictureUrl) {
-              try {
-                uploadedPictureUrl = await uploadProfilePhotoToCloud(
-                  profilePictureUrl,
-                  "profile-pictures"
-                );
-              } catch (uploadErr) {
-                console.error("Profile picture upload failed:", uploadErr);
-                uploadedPictureUrl = "";
-              }
-            }
-            user.profilePicture = uploadedPictureUrl;
-          }
-          user.loginHistory.push(loginEvent);
-          await user.save();
-        }
+        const user = await handleSocialAuth({ req, profile, accessToken, refreshToken, provider: "facebook" });
+        if (user === null) return; // redirect already handled
         return done(null, {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
           username: user.username,
           role: user.role,
-        });
+        } as any);
       } catch (err) {
         console.error("Facebook strategy error:", err);
-        return done(err, undefined);
+        return done(err as any, undefined);
       }
     }
   )
@@ -339,7 +223,7 @@ passport.deserializeUser(async (id: string, done) => {
         email: user.email,
         username: user.username,
         role: user.role,
-      });
+      } as any);
     } else {
       done(null, null);
     }
@@ -347,3 +231,5 @@ passport.deserializeUser(async (id: string, done) => {
     done(error, null);
   }
 });
+
+export default passport;
