@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ArrowLeftIcon, CheckCircleIcon } from "lucide-react"
 import Link from "next/link"
+import axios from "axios"
 
 export default function VerifyPage() {
   const router = useRouter()
@@ -68,7 +69,7 @@ export default function VerifyPage() {
     }
   }
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const otpValue = otp.join("")
 
     if (otpValue.length !== 6) {
@@ -79,20 +80,42 @@ export default function VerifyPage() {
     setIsVerifying(true)
     setError("")
 
-    // Simulate verification
-    setTimeout(() => {
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/verify-otp`,
+        {
+          email,
+          otp: otpValue,
+        },
+        {
+          withCredentials: true,
+        }
+      )
+
+      // Clear signup data from sessionStorage
+      sessionStorage.removeItem("signupData")
+      sessionStorage.removeItem("selectedRole")
+
+      router.push("/dashboard")
+    } catch (error: any) {
       setIsVerifying(false)
-      if (otpValue === "123456") {
-        router.push("/dashboard")
-      } else {
-        setError("Invalid code. Please try again.")
-      }
-    }, 1500)
+      setError(error.response?.data?.message || "Invalid code. Please try again.")
+    }
   }
 
-  const handleResend = () => {
-    setCountdown(60)
-    setError("")
+  const handleResend = async () => {
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/request-otp`,
+        {
+          email,
+        }
+      )
+      setCountdown(60)
+      setError("")
+    } catch (error: any) {
+      setError(error.response?.data?.message || "Failed to resend code. Please try again.")
+    }
   }
 
   return (

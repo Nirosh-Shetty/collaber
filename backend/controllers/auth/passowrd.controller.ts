@@ -15,14 +15,20 @@ export const forgotPassword = async (
     return res.status(400).json({ message: "Email is required" });
   }
 
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!normalizedEmail) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
   try {
-    const user = await UserModel.findOne({ email });
+    const user = await UserModel.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     // Optional: Rate-limit resend attempts (30 seconds)
-    const blockKey = `reset_block_${email}`;
+    const blockKey = `reset_block_${normalizedEmail}`;
     const isBlocked = await sessionStore.get(blockKey);
     if (isBlocked) {
       return res.status(429).json({ message: "Please wait before resending" });
@@ -39,7 +45,9 @@ export const forgotPassword = async (
     const token = await sessionStore.set(tokenPayload, tokenTTL);
 
     //Generate reset link
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    let resetPath = process.env.FRONTEND_RESET_PASSWORD_PATH || "/reset-password1";
+    if (!resetPath.startsWith("/")) resetPath = `/${resetPath}`;
+    const resetLink = `${process.env.FRONTEND_URL}${resetPath}?token=${token}`;
 
     //Send email
     await mailer(user.email, user.username, resetLink, "resetPassword");
@@ -111,6 +119,8 @@ export const resetPassword = async (
     // Hash & save new password
     const hashedPassword = await bcryptjs.hash(newPassword, 10);
     user.password = hashedPassword;
+    if (!user.linkedAccounts) user.linkedAccounts = [];
+    if (!user.linkedAccounts.includes("local")) user.linkedAccounts.push("local");
     await user.save();
 
     // Clean up

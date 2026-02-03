@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { EyeIcon, EyeOffIcon, UserIcon } from "lucide-react"
 import Link from "next/link"
+import axios from "axios"
 
 export default function Signin1Page() {
   const router = useRouter()
@@ -26,7 +27,7 @@ export default function Signin1Page() {
     if (error) setError("")
   }
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
@@ -37,21 +38,27 @@ export default function Signin1Page() {
 
     setIsLoading(true)
 
-    // Simulate authentication process
-    setTimeout(() => {
-      setIsLoading(false)
-      // For demo - you'd handle actual authentication here
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
+        {
+          identifier: formData.identifier,
+          password: formData.password,
+        },
+        {
+          withCredentials: true,
+        }
+      )
       router.push("/dashboard")
-    }, 1500)
-  }
-
-  const handleSocialLogin = (provider: string) => {
-    setIsLoading(true)
-    // Simulate social login
-    setTimeout(() => {
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        setError(error.response.data.message)
+      } else {
+        setError("An error occurred. Please try again.")
+      }
+    } finally {
       setIsLoading(false)
-      router.push("/dashboard")
-    }, 1500)
+    }
   }
 
   return (
@@ -142,9 +149,10 @@ export default function Signin1Page() {
             {/* Social Login Options */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <Button
+                type="button"
                 variant="outline"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30"
-                onClick={() => handleSocialLogin("google")}
+                onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/google`}
                 disabled={isLoading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -168,9 +176,10 @@ export default function Signin1Page() {
                 Google
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30"
-                onClick={() => handleSocialLogin("facebook")}
+                onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/facebook`}
                 disabled={isLoading}
               >
                 <svg className="w-5 h-5 mr-2 text-blue-600 fill-current" viewBox="0 0 24 24">

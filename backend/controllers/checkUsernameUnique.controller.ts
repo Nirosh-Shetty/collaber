@@ -8,7 +8,9 @@ export const checkUsernameUnique = async (
 ): Promise<any> => {
   try {
     const { email, username } = req.body;
-    if (!email)
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!normalizedEmail)
       return res.status(400).json({ message: "Please enter your email first" });
 
     if (!username || typeof username !== "string") {
@@ -16,11 +18,12 @@ export const checkUsernameUnique = async (
         .status(400)
         .json({ message: "Username is required and must be a string" });
     }
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(normalizedUsername)) {
       return res.status(400).json({ message: "Invalid username format" });
     }
 
-    const user = await UserModel.findOne({ username }).lean();
+    const user = await UserModel.findOne({ username: normalizedUsername }).lean();
 
     // Username doesn't exist — available
     if (!user) {
@@ -31,7 +34,7 @@ export const checkUsernameUnique = async (
     }
 
     const isSameUser =
-      user.email === email &&
+      user.email === normalizedEmail &&
       !user.isVerified &&
       user.reservationExpiresAt &&
       new Date(user.reservationExpiresAt) > new Date();
@@ -47,7 +50,7 @@ export const checkUsernameUnique = async (
     return res.status(200).json({
       message: "Username is taken",
       availability: "taken",
-      suggestions: await generateUsernameSuggestions(username),
+      suggestions: await generateUsernameSuggestions(normalizedUsername),
     });
   } catch (error) {
     console.error("Error checking username uniqueness:", error);

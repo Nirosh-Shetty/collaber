@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeftIcon, EyeIcon, EyeOffIcon, CheckIcon, XIcon, LoaderIcon, RefreshCwIcon } from "lucide-react"
 import Link from "next/link"
+import axios from "axios"
 
 export default function DetailsPage() {
   const router = useRouter()
@@ -35,7 +36,36 @@ export default function DetailsPage() {
     }
   }, [router])
 
-  // Username validation with debounce
+  // Username validation with debounce and backend check
+  const lastCheckedUsername = useRef<string | null>(null)
+
+  const checkUsernameAvailability = useCallback(
+    async (username: string) => {
+      setUsernameStatus("checking")
+      lastCheckedUsername.current = username
+      try {
+        const res = await axios.post(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/check-username-unique`,
+          { username, email: formData.email }
+        )
+        setUsernameStatus(res?.data?.availability)
+        if (res?.data?.availability === "taken") {
+          setUsernameSuggestions(res?.data?.suggestions || [])
+        } else {
+          setUsernameSuggestions([])
+        }
+      } catch (error: any) {
+        console.error("Failed to check username availability")
+        setUsernameStatus("idle")
+        setErrors((prev) => ({
+          ...prev,
+          username: error.response?.data?.message || "Error checking username",
+        }))
+      }
+    },
+    [formData.email]
+  )
+
   useEffect(() => {
     if (formData.username.length < 3) {
       setUsernameStatus("idle")
@@ -44,26 +74,13 @@ export default function DetailsPage() {
     }
 
     const timer = setTimeout(() => {
-      setUsernameStatus("checking")
-
-      // Simulate API call
-      setTimeout(() => {
-        const isAvailable =
-          formData.username.length > 5 &&
-          !["admin", "test", "user", "username", "collaber"].includes(formData.username.toLowerCase())
-
-        if (isAvailable) {
-          setUsernameStatus("available")
-          setUsernameSuggestions([])
-        } else {
-          setUsernameStatus("taken")
-          generateUsernameSuggestions(formData.username)
-        }
-      }, 800)
+      if (lastCheckedUsername.current !== formData.username) {
+        checkUsernameAvailability(formData.username)
+      }
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [formData.username])
+  }, [formData.username, checkUsernameAvailability])
 
   const generateUsernameSuggestions = (baseUsername: string) => {
     const base = baseUsername.toLowerCase().replace(/[^a-z0-9]/g, "")
@@ -91,18 +108,13 @@ export default function DetailsPage() {
 
   const selectSuggestion = (suggestion: string) => {
     setFormData((prev) => ({ ...prev, username: suggestion }))
-    setUsernameStatus("checking")
+    setUsernameStatus("available")
     setUsernameSuggestions([])
 
     // Clear any existing username errors
     if (errors.username) {
       setErrors((prev) => ({ ...prev, username: "" }))
     }
-
-    // Immediately check the suggested username (assume suggestions are always available)
-    setTimeout(() => {
-      setUsernameStatus("available")
-    }, 500)
   }
 
   // Password strength
@@ -128,7 +140,7 @@ export default function DetailsPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     const newErrors: Record<string, string> = {}
@@ -144,16 +156,51 @@ export default function DetailsPage() {
 
     setIsSubmitting(true)
 
-    // Store data and proceed to verification
-    sessionStorage.setItem(
-      "signupData",
-      JSON.stringify({
-        role: selectedRole,
-        ...formData,
-      }),
-    )
+    try {
+      // Call backend to create user
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup`,
+        {
+          name: formData.email.split("@")[0], // Use email prefix as name, can be updated later
+          email: formData.email,
+          username: formData.username,
+          password: formData.password,
+          role: selectedRole,
+        },
+        {
+          withCredentials: true,
+        }
+      )
 
-    router.push("/signup1/verify")
+      // Store data for verification page
+      sessionStorage.setItem(
+        "signupData",
+        JSON.stringify({
+          role: selectedRole,
+          ...formData,
+        })
+      )
+
+      router.push("/signup1/verify")
+    } catch (error: any) {
+      console.error("Signup error:", error)
+      const errorMessage = error.response?.data?.message || "An error occurred during signup"
+      const errorIn = error.response?.data?.errorIn
+
+      if (errorIn) {
+        setErrors((prev) => ({
+          ...prev,
+          [errorIn]: errorMessage,
+        }))
+      } else {
+        setErrors((prev) => ({
+          ...prev,
+          email: errorMessage,
+        }))
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const getRoleLabel = () => {

@@ -106,9 +106,10 @@ authRouter.get(
 );
 
 authRouter.post("/signup/basic-info", signUpBasicInfo);
-//TODO: change the url and controller name. give a signup related name like above
-authRouter.post("/signup/request-otp", requestOtp);
-authRouter.post("/signup/verify-otp", verifyOtp);
+authRouter.post("/request-otp", requestOtp);
+authRouter.post("/signup/request-otp", requestOtp); // Alias for old flow
+authRouter.post("/verify-otp", verifyOtp);
+authRouter.post("/signup/verify-otp", verifyOtp); // Alias for old flow
 
 //when user tries to login through google/facebook and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
 authRouter.post("/complete-social-auth", completeSocialAuth);

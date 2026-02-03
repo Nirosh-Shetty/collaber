@@ -48,19 +48,15 @@ export default function WelcomePage() {
   ];
 
   const handleSocialSignup = (provider: string) => {
-    if (!selectedRole) return;
+    if (!selectedRole) return
 
-    // Store role for after social auth
-    sessionStorage.setItem("selectedRole", selectedRole);
-
-    // Redirect to social auth page
+    // Redirect to backend OAuth endpoint with role as query parameter
     if (provider === "google") {
-      router.push("/signup1/google-auth");
+      window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/google?role=${selectedRole}`
     } else if (provider === "facebook") {
-      // For demo, just redirect to Google auth
-      router.push("/signup1/google-auth");
+      window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/facebook?role=${selectedRole}`
     }
-  };
+  }
 
   const handleLocalSignup = () => {
     if (!selectedRole) return;

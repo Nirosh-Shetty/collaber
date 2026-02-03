@@ -15,8 +15,36 @@ export const signUpBasicInfo = async (
   const { name, email, username, password, role } = req.body;
 
   try {
-    //TODO: you need to check if the username is taken or not even though it's already checked in, but it can be bypassed by some tricks. try doing a util function called checkUsernameUnique and use it here and you aslo use it in the checkUSernameUnique controller. ALSo use status code 409 if the username is taken as i used the same status code in the frontend for this purpoose
-    const existingUser = await UserModel.findOne({ email });
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const normalizedUsername =
+      typeof username === "string" ? username.trim().toLowerCase() : "";
+    const derivedName =
+      typeof name === "string" && name.trim()
+        ? name.trim()
+        : normalizedUsername || (normalizedEmail ? normalizedEmail.split("@")[0] : "");
+
+    const existingUser = normalizedEmail
+      ? await UserModel.findOne({ email: normalizedEmail })
+      : null;
+
+    if (!normalizedUsername) {
+      return res.status(400).json({
+        message: "Username is required",
+        errorIn: "username",
+      });
+    }
+
+    const usernameOwner = await UserModel.findOne({
+      username: normalizedUsername,
+    }).lean();
+
+    if (usernameOwner && usernameOwner.email !== normalizedEmail) {
+      return res.status(409).json({
+        message: "Username is taken",
+        errorIn: "username",
+        suggestions: await generateUsernameSuggestions(normalizedUsername),
+      });
+    }
 
     // ✅ Case 1: User is already verified
     if (
@@ -48,7 +76,7 @@ export const signUpBasicInfo = async (
     if (existingUser) {
       await UserModel.deleteOne({ _id: existingUser._id });
     }
-    if (!name || !email || !username || !password || !role) {
+    if (!derivedName || !normalizedEmail || !normalizedUsername || !password || !role) {
       return res.status(400).json({
         message: "All fields are required",
         errorIn: "allFields",
@@ -59,12 +87,12 @@ export const signUpBasicInfo = async (
     const hashedPass = await bcryptjs.hash(password, 10);
 
     await UserModel.create({
-      name,
-      email,
-      username,
+      name: derivedName,
+      email: normalizedEmail,
+      username: normalizedUsername,
       password: hashedPass,
       role,
-      authProvider: "local",
+      linkedAccounts: ["local"],
       isVerified: false,
       isTempAccount: true,
       reservationExpiresAt: new Date(
@@ -97,11 +125,21 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
   }
 
   try {
+    const normalizedIdentifier =
+      typeof identifier === "string" ? identifier.trim() : "";
+    const identifierAsEmail = normalizedIdentifier.includes("@")
+      ? normalizedIdentifier.toLowerCase()
+      : normalizedIdentifier;
+    const identifierAsUsername = normalizedIdentifier.toLowerCase();
+
     // Check if identifier is email, username, or phone number
-    const orQuery: any[] = [{ email: identifier }, { username: identifier }];
+    const orQuery: any[] = [
+      { email: identifierAsEmail },
+      { username: identifierAsUsername },
+    ];
     // If identifier is a phone number, add it to the query
-    if (/^\d{10}$/.test(identifier)) {
-      orQuery.push({ phone: Number(identifier) });
+    if (/^\d{10}$/.test(normalizedIdentifier)) {
+      orQuery.push({ phone: Number(normalizedIdentifier) });
     }
 
     const user = await UserModel.findOne({
@@ -197,8 +235,16 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
         redirectTo: "/signup/basic-info",
       });
     }
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        message: "Cannot find the email. Please signup again.",
+        redirectTo: "/signup/basic-info",
+      });
+    }
     // Check if the user exists and is a temp account
-    const user = await UserModel.findOne({ email }).lean();
+    const user = await UserModel.findOne({ email: normalizedEmail }).lean();
     if (!user) {
       return res.status(400).json({
         message: "User not found. You need to signup again",
@@ -234,7 +280,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
       });
     }
     const otp = crypto.randomInt(100000, 1000000).toString(); // Generate a 6-digit OTP
-    const response = await mailer(email, user.username, otp, "otp");
+    const response = await mailer(normalizedEmail, user.username, otp, "otp");
     if (!response) {
       return res.status(500).json({ message: "Error sending OTP" });
     }
@@ -243,7 +289,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     }
     // Save OTP to the user record
     await UserModel.updateOne(
-      { email },
+      { email: normalizedEmail },
       {
         $set: {
           otp,
@@ -264,7 +310,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
   const { email, otp } = req.body;
 
   try {
-    const user = await UserModel.findOne({ email });
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const user = await UserModel.findOne({ email: normalizedEmail });
     if (!user)
       return res
         .status(400)
@@ -281,10 +328,14 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
         redirectTo: "/signup/basic-info",
       });
 
-    // if (user.otp !== otp)
-    //TODO: change this during production
-    if ("111111" !== otp)
+    const receivedOtp = typeof otp === "string" ? otp.trim() : "";
+    const devBypass =
+      process.env.NODE_ENV !== "production" &&
+      (receivedOtp === "111111" || receivedOtp === "123456");
+
+    if (!devBypass && (!user.otp || user.otp !== receivedOtp)) {
       return res.status(400).json({ message: "Invalid OTP" });
+    }
 
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
@@ -299,6 +350,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     user.otp = undefined; // Clear OTP after verification
     user.isTempAccount = false; // Mark account as permanent
     user.reservationExpiresAt = undefined;
+    if (!user.linkedAccounts) user.linkedAccounts = [];
+    if (!user.linkedAccounts.includes("local")) user.linkedAccounts.push("local");
     user.loginHistory.push(loginEvent); // Store login event
 
     await user.save();
