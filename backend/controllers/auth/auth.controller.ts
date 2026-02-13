@@ -52,9 +52,24 @@ export const signUpBasicInfo = async (
       !existingUser.isTempAccount &&
       existingUser.isVerified
     ) {
-      return res
-        .status(400)
-        .json({ message: "User already exists", redirectTo: "/signin" });
+      const linkedProviders = existingUser.linkedAccounts?.filter(acc => acc !== "local") || [];
+      if (linkedProviders.length > 0 && !existingUser.password) {
+        // Account exists but was created with OAuth
+        const providerText = linkedProviders.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" or ");
+        return res.status(400).json({
+          message: `An account with this email already exists and is connected to ${providerText}. Please sign in with ${providerText} or use a different email.`,
+          errorIn: "email",
+          linkedAccounts: linkedProviders,
+          redirectTo: "/signin",
+        });
+      } else if (existingUser.password) {
+        // Account exists with email/password
+        return res.status(400).json({
+          message: "An account with this email already exists. Please sign in instead.",
+          errorIn: "email",
+          redirectTo: "/signin",
+        });
+      }
     }
 
     // ✅ Case 2: Pending signup, reservation not expired
@@ -171,10 +186,14 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
       });
     }
     if (!user.password) {
+      const linkedProviders = user.linkedAccounts?.filter(acc => acc !== "local") || [];
+      
       return res.status(400).json({
-        message:
-          "This account was created with a social login. Please use Google or Facebook to sign in or reset the password",
+        message: `This account doesn't have a password set. You can either log in with ${linkedProviders.length > 0 ? linkedProviders.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" or ") : "a social provider"} or set a password now.`,
         errorIn: "identifier",
+        linkedAccounts: linkedProviders,
+        canSetPassword: true,
+        email: user.email, // Send email so they can set password
       });
     }
     const isPasswordCorrect = await bcryptjs.compare(password, user.password);

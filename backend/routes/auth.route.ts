@@ -14,6 +14,7 @@ import { checkUsernameUnique } from "../controllers/checkUsernameUnique.controll
 import {
   forgotPassword,
   resetPassword,
+  setPasswordForOAuth,
 } from "../controllers/auth/passowrd.controller";
 const authRouter = express.Router();
 
@@ -122,5 +123,6 @@ authRouter.post("/check-username-unique", checkUsernameUnique);
 // Password reset and forgot password
 authRouter.post("/forgot-password", forgotPassword);
 authRouter.post("/reset-password", resetPassword);
+authRouter.post("/set-password-oauth", setPasswordForOAuth); // For OAuth users to add password
 
 export default authRouter;

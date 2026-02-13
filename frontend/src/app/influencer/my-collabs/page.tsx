@@ -1,444 +1,321 @@
 "use client"
 
 import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
-import { DollarSign, Eye, Heart, Share, TrendingUp, CheckCircle, Clock, AlertCircle, ExternalLink } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Search,
+  Filter,
+  Calendar,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Eye,
+  MessageSquare,
+  MoreHorizontal,
+  Star,
+} from "lucide-react"
 
-// Mock data for active collaborations
-const activeCollabs = [
+const collaborations = [
   {
     id: 1,
+    title: "Summer Tech Collection",
     brand: "TechCorp",
     brandLogo: "/techcorp-logo.png",
-    campaign: "Summer Tech Launch",
-    status: "In Progress",
-    progress: 65,
-    deadline: "2024-02-15",
-    payment: "$2,500",
-    deliverables: [
-      { type: "Instagram Post", status: "completed", dueDate: "2024-01-20" },
-      { type: "Story Series", status: "in-progress", dueDate: "2024-02-05" },
-      { type: "Reel", status: "pending", dueDate: "2024-02-10" },
-    ],
-    metrics: {
-      reach: "125K",
-      engagement: "8.5%",
-      clicks: "2.1K",
-    },
+    amount: "$2,500",
+    status: "active",
+    deadline: "Jan 20, 2024",
+    deliverables: { completed: 2, total: 3 },
+    description: "Create engaging content showcasing the latest tech gadgets for summer",
+    priority: "high",
+    category: "Technology",
   },
   {
     id: 2,
+    title: "Fitness Challenge Campaign",
     brand: "HealthBrand",
     brandLogo: "/health-brand-logo.png",
-    campaign: "Wellness Journey",
-    status: "Review",
-    progress: 90,
-    deadline: "2024-01-30",
-    payment: "$1,800",
-    deliverables: [
-      { type: "Blog Post", status: "completed", dueDate: "2024-01-15" },
-      { type: "Instagram Post", status: "completed", dueDate: "2024-01-25" },
-      { type: "Video Review", status: "review", dueDate: "2024-01-28" },
-    ],
-    metrics: {
-      reach: "89K",
-      engagement: "12.3%",
-      clicks: "1.8K",
-    },
+    amount: "$1,800",
+    status: "review",
+    deadline: "Jan 25, 2024",
+    deliverables: { completed: 1, total: 2 },
+    description: "30-day fitness challenge with daily workout videos and progress updates",
+    priority: "medium",
+    category: "Health & Fitness",
   },
-]
-
-// Mock data for past collaborations
-const pastCollabs = [
   {
     id: 3,
-    brand: "SportsBrand",
-    brandLogo: "/generic-sports-logo.png",
-    campaign: "Athletic Wear Collection",
-    completedDate: "2024-01-10",
-    payment: "$3,200",
-    rating: 5,
-    finalMetrics: {
-      reach: "200K",
-      engagement: "15.2%",
-      clicks: "4.5K",
-      conversions: "180",
-    },
-    deliverables: [
-      { type: "Instagram Post", status: "completed" },
-      { type: "Story Highlights", status: "completed" },
-      { type: "Reel", status: "completed" },
-      { type: "IGTV", status: "completed" },
-    ],
+    title: "Food Photography Series",
+    brand: "FoodieApp",
+    brandLogo: "/food-app-logo.png",
+    amount: "$3,200",
+    status: "completed",
+    deadline: "Jan 15, 2024",
+    deliverables: { completed: 3, total: 3 },
+    description: "Professional food photography for new restaurant partnerships",
+    priority: "low",
+    category: "Food & Beverage",
   },
   {
     id: 4,
-    brand: "FoodApp",
-    brandLogo: "/food-app-logo.png",
-    campaign: "Recipe Discovery",
-    completedDate: "2023-12-20",
-    payment: "$1,500",
-    rating: 4,
-    finalMetrics: {
-      reach: "95K",
-      engagement: "18.7%",
-      clicks: "2.8K",
-      conversions: "95",
-    },
-    deliverables: [
-      { type: "Recipe Post", status: "completed" },
-      { type: "Story Tutorial", status: "completed" },
-      { type: "Reel", status: "completed" },
-    ],
+    title: "Gaming Setup Showcase",
+    brand: "GameTech",
+    brandLogo: "/generic-sports-logo.png",
+    amount: "$4,100",
+    status: "pending",
+    deadline: "Feb 1, 2024",
+    deliverables: { completed: 0, total: 4 },
+    description: "Showcase the ultimate gaming setup with detailed reviews and tutorials",
+    priority: "high",
+    category: "Gaming",
+  },
+  {
+    id: 5,
+    title: "Sustainable Fashion Week",
+    brand: "EcoWear",
+    brandLogo: "/placeholder-kbq75.png",
+    amount: "$2,800",
+    status: "active",
+    deadline: "Jan 30, 2024",
+    deliverables: { completed: 1, total: 5 },
+    description: "Promote sustainable fashion choices during fashion week",
+    priority: "medium",
+    category: "Fashion",
   },
 ]
 
-const getStatusColor = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "completed":
-      return "bg-green-500/20 text-green-400 border-green-500/30"
-    case "in-progress":
-      return "bg-blue-500/20 text-blue-400 border-blue-500/30"
-    case "review":
-      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-    case "pending":
-      return "bg-gray-500/20 text-gray-400 border-gray-500/30"
-    default:
-      return "bg-gray-500/20 text-gray-400 border-gray-500/30"
-  }
-}
+export default function MyCollaborations() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [activeTab, setActiveTab] = useState("all")
 
-const getStatusIcon = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "completed":
-      return <CheckCircle className="h-4 w-4" />
-    case "in-progress":
-      return <Clock className="h-4 w-4" />
-    case "review":
-      return <AlertCircle className="h-4 w-4" />
-    case "pending":
-      return <Clock className="h-4 w-4" />
-    default:
-      return <Clock className="h-4 w-4" />
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-500/20 text-green-400 border-green-500/30"
+      case "completed":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30"
+      case "review":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+      case "pending":
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30"
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30"
+    }
   }
-}
 
-export default function MyCollabsPage() {
-  const [activeTab, setActiveTab] = useState("active")
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Clock className="h-3 w-3" />
+      case "completed":
+        return <CheckCircle className="h-3 w-3" />
+      case "review":
+        return <Eye className="h-3 w-3" />
+      case "pending":
+        return <AlertCircle className="h-3 w-3" />
+      default:
+        return <Clock className="h-3 w-3" />
+    }
+  }
+
+  const filteredCollabs = collaborations.filter((collab) => {
+    const matchesSearch =
+      collab.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      collab.brand.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesTab = activeTab === "all" || collab.status === activeTab
+    return matchesSearch && matchesTab
+  })
+
+  const getTabCount = (status: string) => {
+    if (status === "all") return collaborations.length
+    return collaborations.filter((c) => c.status === status).length
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">My Collaborations</h1>
-          <p className="text-gray-300">Track your ongoing and completed brand partnerships</p>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">My Collaborations</h1>
+          <p className="text-sm sm:text-base text-gray-400 mt-1">Manage and track your brand partnerships</p>
         </div>
+        <Button className="w-full sm:w-auto">
+          <MessageSquare className="h-4 w-4 mr-2" />
+          New Proposal
+        </Button>
+      </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-black/20 border-white/10 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Active Collabs</p>
-                  <p className="text-2xl font-bold text-white">{activeCollabs.length}</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-black/20 border-white/10 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Completed</p>
-                  <p className="text-2xl font-bold text-white">{pastCollabs.length}</p>
-                </div>
-                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-green-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-black/20 border-white/10 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Total Earnings</p>
-                  <p className="text-2xl font-bold text-white">$9,000</p>
-                </div>
-                <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-purple-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-black/20 border-white/10 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Avg Rating</p>
-                  <p className="text-2xl font-bold text-white">4.5</p>
-                </div>
-                <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-yellow-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search collaborations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-black/20 border-white/10 text-white placeholder:text-gray-400"
+          />
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-auto border-white/20 hover:bg-white/10 bg-transparent">
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700">
+            <DropdownMenuItem className="text-gray-300">By Priority</DropdownMenuItem>
+            <DropdownMenuItem className="text-gray-300">By Category</DropdownMenuItem>
+            <DropdownMenuItem className="text-gray-300">By Deadline</DropdownMenuItem>
+            <DropdownMenuItem className="text-gray-300">By Amount</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-black/20 border border-white/10">
-            <TabsTrigger
-              value="active"
-              className="data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300"
-            >
-              Active Collaborations ({activeCollabs.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="past"
-              className="data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300"
-            >
-              Past Collaborations ({pastCollabs.length})
-            </TabsTrigger>
-          </TabsList>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-5 bg-white/5 p-1">
+          <TabsTrigger value="all" className="text-xs sm:text-sm">
+            All ({getTabCount("all")})
+          </TabsTrigger>
+          <TabsTrigger value="active" className="text-xs sm:text-sm">
+            Active ({getTabCount("active")})
+          </TabsTrigger>
+          <TabsTrigger value="review" className="text-xs sm:text-sm">
+            Review ({getTabCount("review")})
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="text-xs sm:text-sm">
+            Done ({getTabCount("completed")})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="text-xs sm:text-sm">
+            Pending ({getTabCount("pending")})
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Active Collaborations */}
-          <TabsContent value="active" className="space-y-6">
-            {activeCollabs.map((collab) => (
-              <Card key={collab.id} className="bg-black/20 border-white/10 backdrop-blur-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={collab.brandLogo || "/placeholder.svg"} alt={collab.brand} />
-                        <AvatarFallback>{collab.brand.slice(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-white">{collab.campaign}</CardTitle>
-                        <CardDescription className="text-gray-400">
-                          {collab.brand} • Due {new Date(collab.deadline).toLocaleDateString()}
+        <TabsContent value={activeTab} className="mt-4 sm:mt-6">
+          <div className="grid gap-4 sm:gap-6">
+            {filteredCollabs.map((collab) => (
+              <Card key={collab.id} className="bg-black/20 border-white/10 hover:bg-black/30 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between space-y-3 sm:space-y-0">
+                    <div className="flex items-start space-x-3 min-w-0 flex-1">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-sm sm:text-lg">{collab.title.charAt(0)}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <CardTitle className="text-base sm:text-lg text-white truncate">{collab.title}</CardTitle>
+                          <Badge className={`${getStatusColor(collab.status)} text-xs w-fit`}>
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(collab.status)}
+                              {collab.status}
+                            </span>
+                          </Badge>
+                        </div>
+                        <CardDescription className="text-sm text-gray-400 mt-1">
+                          {collab.brand} • {collab.category}
                         </CardDescription>
+                        <p className="text-xs sm:text-sm text-gray-300 mt-2 line-clamp-2">{collab.description}</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(collab.status)}>
-                        {getStatusIcon(collab.status)}
-                        {collab.status}
-                      </Badge>
-                      <span className="text-green-400 font-semibold">{collab.payment}</span>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700">
+                        <DropdownMenuItem className="text-gray-300">View Details</DropdownMenuItem>
+                        <DropdownMenuItem className="text-gray-300">Edit</DropdownMenuItem>
+                        <DropdownMenuItem className="text-gray-300">Message Brand</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-400">Archive</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Progress */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-400">Overall Progress</span>
-                      <span className="text-sm text-white">{collab.progress}%</span>
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center text-green-400 text-xs sm:text-sm">
+                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="font-semibold">{collab.amount}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">Payment</p>
                     </div>
-                    <Progress value={collab.progress} className="h-2" />
-                  </div>
-
-                  {/* Deliverables */}
-                  <div>
-                    <h4 className="text-white font-medium mb-3">Deliverables</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {collab.deliverables.map((deliverable, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
-                        >
-                          <div className="flex items-center space-x-2">
-                            {getStatusIcon(deliverable.status)}
-                            <span className="text-white text-sm">{deliverable.type}</span>
-                          </div>
-                          <span className="text-xs text-gray-400">
-                            {new Date(deliverable.dueDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="space-y-1">
+                      <div className="flex items-center text-blue-400 text-xs sm:text-sm">
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="font-semibold truncate">{collab.deadline}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">Deadline</p>
                     </div>
-                  </div>
-
-                  {/* Current Metrics */}
-                  <div>
-                    <h4 className="text-white font-medium mb-3">Current Performance</h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center p-3 bg-white/5 rounded-lg border border-white/10">
-                        <Eye className="h-5 w-5 text-blue-400 mx-auto mb-1" />
-                        <p className="text-white font-semibold">{collab.metrics.reach}</p>
-                        <p className="text-xs text-gray-400">Reach</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-purple-400 text-xs sm:text-sm">
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="font-semibold">
+                          {collab.deliverables.completed}/{collab.deliverables.total}
+                        </span>
                       </div>
-                      <div className="text-center p-3 bg-white/5 rounded-lg border border-white/10">
-                        <Heart className="h-5 w-5 text-pink-400 mx-auto mb-1" />
-                        <p className="text-white font-semibold">{collab.metrics.engagement}</p>
-                        <p className="text-xs text-gray-400">Engagement</p>
+                      <p className="text-xs text-gray-500">Deliverables</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-yellow-400 text-xs sm:text-sm">
+                        <Star className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="font-semibold capitalize">{collab.priority}</span>
                       </div>
-                      <div className="text-center p-3 bg-white/5 rounded-lg border border-white/10">
-                        <ExternalLink className="h-5 w-5 text-green-400 mx-auto mb-1" />
-                        <p className="text-white font-semibold">{collab.metrics.clicks}</p>
-                        <p className="text-xs text-gray-400">Clicks</p>
-                      </div>
+                      <p className="text-xs text-gray-500">Priority</p>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex space-x-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                    >
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
+                    <Button size="sm" className="flex-1 sm:flex-none">
                       View Details
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-white/20 text-white hover:bg-white/10 bg-transparent"
+                      className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 bg-transparent"
                     >
-                      Message Brand
+                      <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Message
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                    >
-                      Upload Content
-                    </Button>
+                    {collab.status === "active" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 bg-transparent"
+                      >
+                        Upload Content
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
-          </TabsContent>
+          </div>
 
-          {/* Past Collaborations */}
-          <TabsContent value="past" className="space-y-6">
-            {pastCollabs.map((collab) => (
-              <Card key={collab.id} className="bg-black/20 border-white/10 backdrop-blur-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={collab.brandLogo || "/placeholder.svg"} alt={collab.brand} />
-                        <AvatarFallback>{collab.brand.slice(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-white">{collab.campaign}</CardTitle>
-                        <CardDescription className="text-gray-400">
-                          {collab.brand} • Completed {new Date(collab.completedDate).toLocaleDateString()}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                        <CheckCircle className="h-4 w-4" />
-                        Completed
-                      </Badge>
-                      <span className="text-green-400 font-semibold">{collab.payment}</span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Rating */}
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">Brand Rating:</span>
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`text-lg ${i < collab.rating ? "text-yellow-400" : "text-gray-600"}`}>
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-white">({collab.rating}/5)</span>
-                  </div>
-
-                  {/* Deliverables */}
-                  <div>
-                    <h4 className="text-white font-medium mb-3">Completed Deliverables</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {collab.deliverables.map((deliverable, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-2 p-2 bg-green-500/10 rounded-lg border border-green-500/20"
-                        >
-                          <CheckCircle className="h-4 w-4 text-green-400" />
-                          <span className="text-white text-sm">{deliverable.type}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Final Metrics */}
-                  <div>
-                    <h4 className="text-white font-medium mb-3">Final Performance</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center p-3 bg-white/5 rounded-lg border border-white/10">
-                        <Eye className="h-5 w-5 text-blue-400 mx-auto mb-1" />
-                        <p className="text-white font-semibold">{collab.finalMetrics.reach}</p>
-                        <p className="text-xs text-gray-400">Reach</p>
-                      </div>
-                      <div className="text-center p-3 bg-white/5 rounded-lg border border-white/10">
-                        <Heart className="h-5 w-5 text-pink-400 mx-auto mb-1" />
-                        <p className="text-white font-semibold">{collab.finalMetrics.engagement}</p>
-                        <p className="text-xs text-gray-400">Engagement</p>
-                      </div>
-                      <div className="text-center p-3 bg-white/5 rounded-lg border border-white/10">
-                        <ExternalLink className="h-5 w-5 text-green-400 mx-auto mb-1" />
-                        <p className="text-white font-semibold">{collab.finalMetrics.clicks}</p>
-                        <p className="text-xs text-gray-400">Clicks</p>
-                      </div>
-                      <div className="text-center p-3 bg-white/5 rounded-lg border border-white/10">
-                        <Share className="h-5 w-5 text-purple-400 mx-auto mb-1" />
-                        <p className="text-white font-semibold">{collab.finalMetrics.conversions}</p>
-                        <p className="text-xs text-gray-400">Conversions</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex space-x-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                    >
-                      View Campaign
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                    >
-                      Download Report
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                    >
-                      Leave Review
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-        </Tabs>
-      </div>
+          {filteredCollabs.length === 0 && (
+            <div className="text-center py-8 sm:py-12">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">No collaborations found</h3>
+              <p className="text-sm sm:text-base text-gray-400 mb-4">
+                {searchTerm ? "Try adjusting your search terms" : "Start your first collaboration today"}
+              </p>
+              <Button>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                New Proposal
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -144,3 +144,92 @@ export const resetPassword = async (
     });
   }
 };
+
+// Set password for OAuth-only accounts (when user wants to add email/password login)
+export const setPasswordForOAuth = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const { email, newPassword, confirmPassword } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required", errorIn: "email" });
+  }
+
+  if (!newPassword || !confirmPassword) {
+    return res.status(400).json({ message: "Password is required", errorIn: "password" });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({
+      message: "Passwords do not match",
+      errorIn: "confirmPassword",
+    });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      message: "Password must be at least 8 characters long",
+      errorIn: "password",
+    });
+  }
+
+  if (!/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+    return res.status(400).json({
+      message: "Password must contain letters and numbers",
+      errorIn: "password",
+    });
+  }
+
+  try {
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    const user = await UserModel.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        errorIn: "email",
+      });
+    }
+
+    // Check if user already has a password
+    if (user.password) {
+      return res.status(400).json({
+        message: "This account already has a password. Use password reset instead.",
+        errorIn: "password",
+      });
+    }
+
+    // Check if user has OAuth providers (security check)
+    if (!user.linkedAccounts || user.linkedAccounts.length === 0) {
+      return res.status(400).json({
+        message: "Only OAuth accounts can use this feature",
+        errorIn: "account",
+      });
+    }
+
+    // Hash & save new password
+    const hashedPassword = await bcryptjs.hash(newPassword, 10);
+    user.password = hashedPassword;
+    if (!user.linkedAccounts.includes("local")) {
+      user.linkedAccounts.push("local");
+    }
+    await user.save();
+
+    // Send confirmation email
+    await mailer(user.email, user.username, undefined, "resetPassConfirmation");
+
+    return res.status(200).json({
+      message: "Password set successfully. You can now login with email and password.",
+      errorIn: "success",
+    });
+  } catch (error) {
+    console.error("Error in setPasswordForOAuth:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      errorIn: "error",
+    });
+  }
+};
+

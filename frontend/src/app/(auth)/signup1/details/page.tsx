@@ -25,6 +25,7 @@ export default function DetailsPage() {
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [linkedAccounts, setLinkedAccounts] = useState<string[]>([])
 
   // Get role from sessionStorage
   useEffect(() => {
@@ -186,6 +187,9 @@ export default function DetailsPage() {
       console.error("Signup error:", error)
       const errorMessage = error.response?.data?.message || "An error occurred during signup"
       const errorIn = error.response?.data?.errorIn
+      const linkedProviders = error.response?.data?.linkedAccounts || []
+
+      setLinkedAccounts(linkedProviders)
 
       if (errorIn) {
         setErrors((prev) => ({
@@ -258,7 +262,49 @@ export default function DetailsPage() {
                   }`}
                   required
                 />
-                {errors.email && <p className="text-red-400 text-xs">{errors.email}</p>}
+                {errors.email && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded p-2">
+                    <p className="text-red-400 text-xs mb-2">{errors.email}</p>
+                    {linkedAccounts.length > 0 && (
+                      <div className="text-xs text-red-300">
+                        <p className="mb-2">Please sign in with:</p>
+                        <div className="flex gap-2">
+                          {linkedAccounts.includes("google") && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="bg-red-500/20 border-red-500/50 text-red-200 hover:bg-red-500/30 h-7 text-xs"
+                              onClick={() => router.push("/signin1")}
+                            >
+                              <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24">
+                                <path
+                                  fill="currentColor"
+                                  d="M5.26620003,9.76452941 C6.19878754,6.93863203 8.85444915,4.90909091 12,4.90909091 C13.6909091,4.90909091 15.2181818,5.50909091 16.4181818,6.49090909 L19.9090909,3 C17.7818182,1.14545455 15.0545455,0 12,0 C7.27006974,0 3.1977497,2.69829785 1.23999023,6.65002441 L5.26620003,9.76452941 Z"
+                                />
+                              </svg>
+                              Google
+                            </Button>
+                          )}
+                          {linkedAccounts.includes("facebook") && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="bg-red-500/20 border-red-500/50 text-red-200 hover:bg-red-500/30 h-7 text-xs"
+                              onClick={() => router.push("/signin1")}
+                            >
+                              <svg className="w-3 h-3 mr-1 fill-current" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                              </svg>
+                              Facebook
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Username */}
