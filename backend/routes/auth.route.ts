@@ -15,6 +15,7 @@ import {
   forgotPassword,
   resetPassword,
   setPasswordForOAuth,
+  resendPasswordResetEmail,
 } from "../controllers/auth/passowrd.controller";
 const authRouter = express.Router();
 
@@ -122,6 +123,7 @@ authRouter.post("/check-username-unique", checkUsernameUnique);
 
 // Password reset and forgot password
 authRouter.post("/forgot-password", forgotPassword);
+authRouter.post("/resend-password-reset-email", resendPasswordResetEmail);
 authRouter.post("/reset-password", resetPassword);
 authRouter.post("/set-password-oauth", setPasswordForOAuth); // For OAuth users to add password
 

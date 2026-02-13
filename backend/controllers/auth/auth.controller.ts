@@ -189,11 +189,9 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
       const linkedProviders = user.linkedAccounts?.filter(acc => acc !== "local") || [];
       
       return res.status(400).json({
-        message: `This account doesn't have a password set. You can either log in with ${linkedProviders.length > 0 ? linkedProviders.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" or ") : "a social provider"} or set a password now.`,
+        message: `This account doesn't have a password set. Please log in with ${linkedProviders.length > 0 ? linkedProviders.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" or ") : "a social provider"} or use Forgot Password to set one.`,
         errorIn: "identifier",
         linkedAccounts: linkedProviders,
-        canSetPassword: true,
-        email: user.email, // Send email so they can set password
       });
     }
     const isPasswordCorrect = await bcryptjs.compare(password, user.password);

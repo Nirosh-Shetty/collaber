@@ -1,45 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, MailIcon } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { forgotPasswordSchema } from "@/schemas/forgot&resetPassword.schema";
 import type { z } from "zod";
-import axios from "axios";
 
-export default function ForgotPasswordPage() {
+export default function ForgotPassword1Page() {
   const router = useRouter();
-  // const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(0);
-  // const [isResending, setIsResending] = useState(false);
-  // Handle countdown timer
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
 
   const {
     handleSubmit,
     register,
-    // getValues,
     formState: { errors },
   } = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),
   });
-  // const email = getValues("email");
 
-  // Start countdown when email is first sent
   const handleForgotPasswordSubmit = async (
     data: z.infer<typeof forgotPasswordSchema>
   ) => {
@@ -53,17 +40,20 @@ export default function ForgotPasswordPage() {
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/forgot-password`,
-        {
-          email: data.email,
-        }
+        { email: data.email },
+        { withCredentials: true }
       );
-      // setIsSubmitted(true);
-      router.replace(
-        `/forgot-password/check-email?email=${encodeURIComponent(data.email)}`
+
+      // keep email for result page fallback
+      sessionStorage.setItem("resetEmail", data.email);
+
+      // preferred: pass email in query so result page doesn't rely on sessionStorage
+      router.push(
+        `/forgot-password/result?email=${encodeURIComponent(data.email)}`
       );
-    } catch (error) {
-      if (error instanceof axios.AxiosError) {
-        setError(error.response?.data?.message);
+    } catch (err: any) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Failed to send reset link");
       } else {
         setError("An unexpected error occurred. Please try again later.");
       }
@@ -73,55 +63,72 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="container max-w-md mx-auto py-10 px-4">
-      <div className="space-y-6">
-        <Link
-          href="/signin"
-          className="flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeftIcon className="mr-2 h-4 w-4" />
-          Back to sign in
-        </Link>
-
-        <>
-          <div>
-            <h1 className="text-2xl font-bold">Forgot Password</h1>
-            <p className="text-muted-foreground mt-2">
-              Enter your email address and we&apos;ll send you a link to reset
-              your password.
-            </p>
-          </div>
-
-          <form
-            className="space-y-4"
-            onSubmit={handleSubmit(handleForgotPasswordSubmit)}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email address"
-                {...register("email")}
-                required
-              />
-
-              {errors?.email?.message ? (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              ) : error ? (
-                <p className="text-sm text-red-500">{error}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Enter the email address associated with your account.
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+          <CardContent className="p-8">
+            {/* Header */}
+            <div className="flex items-center mb-6">
+              <Link href="/signin" className="mr-4">
+                <ArrowLeftIcon className="h-5 w-5 text-gray-400 hover:text-white transition-colors" />
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-white">Reset Password</h1>
+                <p className="text-sm text-gray-400">
+                  We&apos;ll send you a reset link
                 </p>
-              )}
+              </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Sending..." : "Reset Password"}
-            </Button>
-          </form>
-        </>
+            {/* Icon */}
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MailIcon className="h-8 w-8 text-white" />
+              </div>
+              <p className="text-gray-300 text-sm">
+                Enter your email and we&apos;ll send you a link to reset your
+                password
+              </p>
+            </div>
+
+            <form
+              className="space-y-6"
+              onSubmit={handleSubmit(handleForgotPasswordSubmit)}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-white">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  {...register("email")}
+                  className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                  required
+                />
+
+                {errors?.email?.message ? (
+                  <p className="text-red-400 text-xs">{errors.email.message}</p>
+                ) : error ? (
+                  <p className="text-red-400 text-xs">{error}</p>
+                ) : (
+                  <p className="text-gray-400 text-xs">
+                    Enter the email associated with your account
+                  </p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium py-3"
+              >
+                {isSubmitting ? "Sending..." : "Send Reset Link"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

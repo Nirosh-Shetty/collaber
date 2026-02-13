@@ -31,7 +31,7 @@ export default function DetailsPage() {
   useEffect(() => {
     const role = sessionStorage.getItem("selectedRole")
     if (!role) {
-      router.push("/signup1/welcome")
+      router.push("/signup/welcome")
     } else {
       setSelectedRole(role)
     }
@@ -182,7 +182,7 @@ export default function DetailsPage() {
         })
       )
 
-      router.push("/signup1/verify")
+      router.push("/signup/verify")
     } catch (error: any) {
       console.error("Signup error:", error)
       const errorMessage = error.response?.data?.message || "An error occurred during signup"
@@ -236,7 +236,7 @@ export default function DetailsPage() {
           <CardContent className="p-8">
             {/* Header */}
             <div className="flex items-center mb-6">
-              <Link href="/signup1/welcome" className="mr-4">
+              <Link href="/signup/welcome" className="mr-4">
                 <ArrowLeftIcon className="h-5 w-5 text-gray-400 hover:text-white transition-colors" />
               </Link>
               <div>
@@ -275,7 +275,7 @@ export default function DetailsPage() {
                               variant="outline"
                               size="sm"
                               className="bg-red-500/20 border-red-500/50 text-red-200 hover:bg-red-500/30 h-7 text-xs"
-                              onClick={() => router.push("/signin1")}
+                              onClick={() => router.push("/signin")}
                             >
                               <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24">
                                 <path
@@ -292,7 +292,7 @@ export default function DetailsPage() {
                               variant="outline"
                               size="sm"
                               className="bg-red-500/20 border-red-500/50 text-red-200 hover:bg-red-500/30 h-7 text-xs"
-                              onClick={() => router.push("/signin1")}
+                              onClick={() => router.push("/signin")}
                             >
                               <svg className="w-3 h-3 mr-1 fill-current" viewBox="0 0 24 24">
                                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />

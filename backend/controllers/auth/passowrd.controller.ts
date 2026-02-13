@@ -45,7 +45,7 @@ export const forgotPassword = async (
     const token = await sessionStore.set(tokenPayload, tokenTTL);
 
     //Generate reset link
-    let resetPath = process.env.FRONTEND_RESET_PASSWORD_PATH || "/reset-password1";
+    let resetPath = "/reset-password";
     if (!resetPath.startsWith("/")) resetPath = `/${resetPath}`;
     const resetLink = `${process.env.FRONTEND_URL}${resetPath}?token=${token}`;
 
@@ -55,6 +55,71 @@ export const forgotPassword = async (
     return res.status(200).json({ message: "Reset email sent successfully" });
   } catch (error) {
     console.error("Error in forgotPassword:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const resendPasswordResetEmail = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!normalizedEmail) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  try {
+    const user = await UserModel.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Rate-limit resend attempts (2 minutes between resends)
+    const resendKey = `resend_reset_${normalizedEmail}`;
+    const lastResendTime = await sessionStore.get(resendKey);
+    
+    if (lastResendTime) {
+      const timePassed = Date.now() - parseInt(lastResendTime);
+      const secondsRemaining = Math.ceil((2 * 60 * 1000 - timePassed) / 1000);
+      
+      return res.status(429).json({
+        message: `Please wait ${secondsRemaining} seconds before requesting another email`,
+        retryAfter: secondsRemaining,
+      });
+    }
+
+    // Store current timestamp for rate limiting
+    await sessionStore.setWithKey(resendKey, Date.now().toString(), 2 * 60); // 2 minutes
+
+    // Store reset info in Redis session store
+    const tokenPayload = {
+      userId: user._id,
+      email: user.email,
+    };
+
+    const tokenTTL = 60 * 60; // 1 hour
+    const token = await sessionStore.set(tokenPayload, tokenTTL);
+
+    // Generate reset link
+    let resetPath = "/reset-password";
+    if (!resetPath.startsWith("/")) resetPath = `/${resetPath}`;
+    const resetLink = `${process.env.FRONTEND_URL}${resetPath}?token=${token}`;
+
+    // Send email
+    await mailer(user.email, user.username, resetLink, "resetPassword");
+
+    return res.status(200).json({ 
+      message: "Password reset email resent successfully. Please check your inbox." 
+    });
+  } catch (error) {
+    console.error("Error in resendPasswordResetEmail:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

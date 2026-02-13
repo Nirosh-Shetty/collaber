@@ -22,7 +22,7 @@ export default function VerifyPage() {
   useEffect(() => {
     const signupData = sessionStorage.getItem("signupData")
     if (!signupData) {
-      router.push("/signup1/welcome")
+      router.push("/signup/welcome")
       return
     }
 
@@ -134,7 +134,7 @@ export default function VerifyPage() {
           <CardContent className="p-8">
             {/* Header */}
             <div className="flex items-center mb-6">
-              <Link href="/signup1/details" className="mr-4">
+              <Link href="/signup/details" className="mr-4">
                 <ArrowLeftIcon className="h-5 w-5 text-gray-400 hover:text-white transition-colors" />
               </Link>
               <div>

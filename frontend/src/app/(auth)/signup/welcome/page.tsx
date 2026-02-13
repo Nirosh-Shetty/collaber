@@ -63,7 +63,7 @@ export default function WelcomePage() {
 
     setIsSubmitting(true);
     sessionStorage.setItem("selectedRole", selectedRole);
-    router.push("/signup1/details");
+    router.push("/signup/details");
   };
 
   return (

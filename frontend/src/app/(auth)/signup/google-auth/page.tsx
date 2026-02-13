@@ -18,7 +18,7 @@ export default function GoogleAuthPage() {
       window.location.href = `${backendUrl}/api/auth/google?role=${selectedRole}`
     } else {
       // If no role, redirect back to welcome
-      router.push("/signup1/welcome")
+      router.push("/signup/welcome")
     }
   }, [router])
 
