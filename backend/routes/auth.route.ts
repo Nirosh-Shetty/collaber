@@ -16,6 +16,7 @@ import {
   resetPassword,
   setPasswordForOAuth,
 } from "../controllers/auth/passowrd.controller";
+
 const authRouter = express.Router();
 
 authRouter.post("/signin", signIn);
@@ -108,14 +109,13 @@ authRouter.get(
 
 authRouter.post("/signup/basic-info", signUpBasicInfo);
 authRouter.post("/request-otp", requestOtp);
-authRouter.post("/signup/request-otp", requestOtp); // Alias for old flow
+authRouter.post("/signup/request-otp", requestOtp); 
 authRouter.post("/verify-otp", verifyOtp);
-authRouter.post("/signup/verify-otp", verifyOtp); // Alias for old flow
+authRouter.post("/signup/verify-otp", verifyOtp); 
 
 //when user tries to login through google/facebook and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
 authRouter.post("/complete-social-auth", completeSocialAuth);
 
-// POST /api/auth/signout
 authRouter.post("/signout", signout);
 
 authRouter.post("/check-username-unique", checkUsernameUnique);
