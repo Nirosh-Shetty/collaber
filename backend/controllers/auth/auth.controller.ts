@@ -527,3 +527,33 @@ export const signout = (req: Request, res: Response): any => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const getOAuthSession = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const sessionId = req.cookies.sessionId;
+    if (!sessionId) {
+      return res.status(400).json({
+        message: "No session found. Please try signing up again.",
+        redirectTo: "/signin",
+      });
+    }
+
+    const sessionData = await sessionStore.get(sessionId);
+    if (!sessionData) {
+      return res.status(400).json({
+        message: "Session expired. Please try signing up again.",
+        redirectTo: "/signin",
+      });
+    }
+
+    return res.status(200).json({
+      user: sessionData,
+    });
+  } catch (error) {
+    console.error("Error retrieving OAuth session:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

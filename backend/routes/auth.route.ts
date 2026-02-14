@@ -7,6 +7,7 @@ import {
   signout,
   signUpBasicInfo,
   verifyOtp,
+  getOAuthSession,
 } from "../controllers/auth/auth.controller";
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
@@ -63,7 +64,7 @@ authRouter.get(
       maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
       sameSite: "lax",
     });
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    res.redirect(`${process.env.FRONTEND_URL}/${user.role}/dashboard`);
   }
 );
 
@@ -103,7 +104,7 @@ authRouter.get(
       sameSite: "lax", // Match Google
     });
 
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    res.redirect(`${process.env.FRONTEND_URL}/${user.role}/dashboard`);
   }
 );
 
@@ -114,6 +115,7 @@ authRouter.post("/verify-otp", verifyOtp);
 authRouter.post("/signup/verify-otp", verifyOtp); 
 
 //when user tries to login through google/facebook and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
+authRouter.get("/get-oauth-session", getOAuthSession);
 authRouter.post("/complete-social-auth", completeSocialAuth);
 
 authRouter.post("/signout", signout);
