@@ -6,6 +6,7 @@ import {
 } from "passport-google-oauth20";
 import { Strategy as FacebookStrategy } from "passport-facebook";
 import UserModel from "../models/Users"; // Your user model
+import { PassportUser } from "../types/passportUser";
 import dotenv from "dotenv";
 import { Request, Response as ExpressResponse } from "express";
 import { generateUsernameSuggestions } from "../utils/generateUsernameSuggestions";
@@ -45,8 +46,9 @@ passport.use(
           time: new Date(),
         };
         if (!user) {
+
+          // Always redirect to role selection if role is missing or invalid
           if (!role || !["influencer", "brand", "manager"].includes(role)) {
-            // If no role is provided, redirect to select role page
             const basicProfile = {
               name: profile.displayName,
               email,
@@ -54,25 +56,23 @@ passport.use(
               profilePictureUrl: profile.photos?.[0]?.value,
               googleId: profile.id,
             };
-
             const sessionId = await sessionStore.set(basicProfile, 5 * 60);
             (req.res as ExpressResponse).cookie("sessionId", sessionId, {
               httpOnly: true,
               secure: process.env.NODE_ENV === "production",
               maxAge: 10 * 60 * 1000,
             });
-
             return (req.res as ExpressResponse).redirect(
-              `${process.env.FRONTEND_URL}/signup/role?fromProvider=google`
+              `${process.env.FRONTEND_URL}/signup/oauth-role-required?fromProvider=google`
             );
           }
 
+          // If role is valid, proceed with user creation (unchanged)
           const usernameSuggested = await generateUsernameSuggestions(
             email.split("@")[0],
             1
           );
           const profilePictureUrl = profile.photos?.[0]?.value;
-          // console.log(profilePictureUrl);
           let uploadedPictureUrl = "";
           if (profilePictureUrl) {
             try {
@@ -85,7 +85,6 @@ passport.use(
               uploadedPictureUrl = "";
             }
           }
-
           user = new UserModel({
             name: profile.displayName,
             email,
@@ -98,21 +97,18 @@ passport.use(
             profilePicture: uploadedPictureUrl,
             loginHistory: [loginEvent],
           });
-
           await user.save();
         } else {
-          // Add "google" to linkedAccounts if not already present
+          // Existing user logic (unchanged)
           if (!user.linkedAccounts) {
             user.linkedAccounts = [];
           }
           if (!user.linkedAccounts.includes("google")) {
             user.linkedAccounts.push("google");
           }
-
           if (!user.googleId) user.googleId = profile.id;
           if (!user.profilePicture && profile.photos?.[0]?.value) {
             const profilePictureUrl = profile.photos?.[0]?.value;
-            console.log(profilePictureUrl);
             let uploadedPictureUrl = "";
             if (profilePictureUrl) {
               try {
@@ -125,44 +121,20 @@ passport.use(
                 uploadedPictureUrl = "";
               }
             }
-
             user.profilePicture = uploadedPictureUrl;
           }
           user.loginHistory.push(loginEvent);
-
           await user.save();
         }
 
-        // const oauth2Client = new google.auth.OAuth2();
-        // oauth2Client.setCredentials({
-        //   access_token: accessToken,
-        //   refresh_token: refreshToken,
-        // });
-
-        // const youtubeAnalytics = google.youtubeAnalytics("v2");
-        // const response = await youtubeAnalytics.reports.query({
-        //   auth: oauth2Client,
-        //   ids: "channel==MINE",
-        //   startDate: "2023-01-01",
-        //   endDate: "2023-12-31",
-        //   metrics: "views,likes,subscribersGained",
-        // });
-        // console.log(JSON.stringify(response.data, null, 2));
-        // const { columnHeaders, rows } = response.data;
-
-        // console.log(
-        //   "Columns:",
-        //   columnHeaders.map((c) => c.name)
-        // );
-        // console.log("Data:", rows);
-
         return done(null, {
           id: user._id.toString(),
+          uid: user._id.toString(),
           name: user.name,
           email: user.email,
           username: user.username,
           role: user.role,
-        });
+        } as PassportUser);
       } catch (err) {
         console.error("Google strategy error:", err);
         return done(err, undefined);
@@ -216,8 +188,8 @@ passport.use(
 
         // If user does not exist, check for role and redirect if missing
         if (!user) {
+          // Always redirect to role selection if role is missing or invalid
           if (!role || !["influencer", "brand", "manager"].includes(role)) {
-            // Prepare minimal profile for session storage
             const basicProfile = {
               name:
                 profile.displayName ||
@@ -229,17 +201,14 @@ passport.use(
               profilePictureUrl: profile.photos?.[0]?.value,
               facebookId: profile.id,
             };
-
             const sessionId = await sessionStore.set(basicProfile, 5 * 60);
             (req.res as ExpressResponse).cookie("sessionId", sessionId, {
               httpOnly: true,
               secure: process.env.NODE_ENV === "production",
               maxAge: 10 * 60 * 1000,
             });
-
-            // Return immediately after redirecting!
             return (req.res as ExpressResponse).redirect(
-              `${process.env.FRONTEND_URL}/signup/role?fromProvider=facebook`
+              `${process.env.FRONTEND_URL}/signup/oauth-role-required?fromProvider=facebook`
             );
           }
 
@@ -312,11 +281,12 @@ passport.use(
         }
         return done(null, {
           id: user._id.toString(),
+          uid: user._id.toString(),
           name: user.name,
           email: user.email,
           username: user.username,
           role: user.role,
-        });
+        } as PassportUser);
       } catch (err) {
         console.error("Facebook strategy error:", err);
         return done(err, undefined);
@@ -335,11 +305,12 @@ passport.deserializeUser(async (id: string, done) => {
     if (user) {
       done(null, {
         id: user._id.toString(),
+        uid: user._id.toString(),
         name: user.name,
         email: user.email,
         username: user.username,
         role: user.role,
-      });
+      } as PassportUser);
     } else {
       done(null, null);
     }

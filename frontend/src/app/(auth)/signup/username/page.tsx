@@ -126,7 +126,7 @@ export default function UsernamePage() {
       sessionStorage.removeItem("selectedRole")
 
       // Redirect to dashboard
-      router.push("/dashboard")
+      router.push(`/${userData.role}/dashboard`)
     }, 1500)
   }
 
