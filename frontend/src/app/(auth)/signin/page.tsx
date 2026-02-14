@@ -40,7 +40,7 @@ export default function Signin1Page() {
     setIsLoading(true)
 
     try {
-      await axios.post(
+      const res = await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
         {
           identifier: formData.identifier,
@@ -49,8 +49,13 @@ export default function Signin1Page() {
         {
           withCredentials: true,
         }
-      )
-      router.push("/dashboard")
+      );
+      // Expecting role in response: { role: "brand" | "influencer" | "manager" }
+      const role = res.data?.role;
+      if (role === "brand") router.push("/brand/dashboard");
+      else if (role === "influencer") router.push("/influencer/dashboard");
+      else if (role === "manager") router.push("/manager/dashboard");
+      else router.push("/");
     } catch (error: any) {
       if (error.response?.data?.message) {
         setError(error.response.data.message)

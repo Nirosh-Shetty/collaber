@@ -92,11 +92,24 @@ export default function VerifyPage() {
         }
       )
 
+      // Get role from signupData
+      const signupData = sessionStorage.getItem("signupData")
+      let role = null
+      if (signupData) {
+        try {
+          role = JSON.parse(signupData).role
+        } catch {}
+      }
+
       // Clear signup data from sessionStorage
       sessionStorage.removeItem("signupData")
       sessionStorage.removeItem("selectedRole")
 
-      router.push("/dashboard")
+      // Redirect to role-specific dashboard
+      if (role === "brand") router.push("/brand/dashboard")
+      else if (role === "influencer") router.push("/influencer/dashboard")
+      else if (role === "manager") router.push("/manager/dashboard")
+      else router.push("/")
     } catch (error: any) {
       setIsVerifying(false)
       setError(error.response?.data?.message || "Invalid code. Please try again.")

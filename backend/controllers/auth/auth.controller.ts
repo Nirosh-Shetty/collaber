@@ -83,7 +83,7 @@ export const signUpBasicInfo = async (
       return res.status(201).json({
         message:
           "A signup is already in progress for this email. Please verify your email to continue.",
-        redirectTo: "/signup/verify-otp",
+        redirectTo: "/signup/verify",
       });
     }
 
@@ -181,7 +181,7 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
     ) {
       return res.status(401).json({
         message: "Account verification required",
-        redirectTo: "/signup/verify-otp",
+        redirectTo: "/signup/verify",
         errorIn: "identifier",
       });
     }
@@ -249,7 +249,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     if (!email) {
       return res.status(400).json({
         message: "Cannot find the email. Please signup again.",
-        redirectTo: "/signup/basic-info",
+        redirectTo: "/signup/welcome",
       });
     }
     const normalizedEmail =
@@ -257,7 +257,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     if (!normalizedEmail) {
       return res.status(400).json({
         message: "Cannot find the email. Please signup again.",
-        redirectTo: "/signup/basic-info",
+        redirectTo: "/signup/welcome",
       });
     }
     // Check if the user exists and is a temp account
@@ -265,13 +265,13 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     if (!user) {
       return res.status(400).json({
         message: "User not found. You need to signup again",
-        redirectTo: "/signup/basic-info",
+        redirectTo: "/signup/welcome",
       });
     }
     if (user.isVerified && !user.isTempAccount) {
       return res.status(400).json({
         message: "User is already verified. You can  signin directly",
-        redirectTo: "/login",
+        redirectTo: "/signin",
       });
     }
     if (
@@ -281,7 +281,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     ) {
       return res.status(400).json({
         message: "Reservation expired. You need to signup again",
-        redirectTo: "/signup/basic-info",
+        redirectTo: "/signup/welcome",
       });
     }
 
@@ -332,7 +332,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     if (!user)
       return res
         .status(400)
-        .json({ message: "User not found", redirectTo: "/signup/basic-info" });
+        .json({ message: "User not found", redirectTo: "/signup/welcome" });
 
     if (user.isVerified)
       return res
@@ -342,7 +342,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     if (user.reservationExpiresAt && user.reservationExpiresAt < new Date())
       return res.status(400).json({
         message: "Reservation expired",
-        redirectTo: "/signup/basic-info",
+        redirectTo: "/signup/welcome",
       });
 
     const receivedOtp = typeof otp === "string" ? otp.trim() : "";
