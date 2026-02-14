@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import axios from "axios"
+import { usePathname, useRouter } from "next/navigation"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +27,6 @@ import {
   BarChart3Icon,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 
 const sidebarItems = [
   { title: "Dashboard", icon: HomeIcon, url: "/influencer/dashboard" },
@@ -45,7 +46,23 @@ export default function InfluencerLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const pathname = usePathname()
+  const router = useRouter();
+ const handlesignout = async () => {
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signout`,
+        {}, // no body for signout
+        {
+          withCredentials: true, // Important for cookies/session handling
+        }
+      );
 
+      // If successful, navigate
+      router.push("/signin");
+    } catch (error) {
+      console.error("signout error:", error);
+    }
+  };
   const SidebarItem = ({ item }: { item: (typeof sidebarItems)[0] }) => {
     const isActive = pathname === item.url
     const content = (
@@ -276,7 +293,7 @@ export default function InfluencerLayout({
                     <DropdownMenuItem>Billing</DropdownMenuItem>
                     <DropdownMenuItem>Support</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>Sign Out</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handlesignout}>Sign Out</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

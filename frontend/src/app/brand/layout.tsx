@@ -4,7 +4,8 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import axios from "axios"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -83,7 +84,23 @@ export default function BrandLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const pathname = usePathname()
+  const router = useRouter();
+    const handlesignout = async () => {
+      try {
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signout`,
+          {}, // no body for signout
+          {
+            withCredentials: true, // Important for cookies/session handling
+          }
+        );
 
+        // If successful, navigate
+        router.push("/signin");
+      } catch (error) {
+        console.error("signout error:", error);
+      }
+    };
   return (
     <TooltipProvider>
       <div className="h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex overflow-hidden">
@@ -173,7 +190,7 @@ export default function BrandLayout({
                       Account Settings
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-gray-700" />
-                    <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-800">
+                    <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-800" onClick={handlesignout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign Out
                     </DropdownMenuItem>

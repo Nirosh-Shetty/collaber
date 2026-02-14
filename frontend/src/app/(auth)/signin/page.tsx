@@ -51,7 +51,7 @@ export default function Signin1Page() {
         }
       );
       // Expecting role in response: { role: "brand" | "influencer" | "manager" }
-      const role = res.data?.role;
+      const role = res.data?.user?.role;
       if (role === "brand") router.push("/brand/dashboard");
       else if (role === "influencer") router.push("/influencer/dashboard");
       else if (role === "manager") router.push("/manager/dashboard");
