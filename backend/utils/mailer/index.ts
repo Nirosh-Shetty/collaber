@@ -26,7 +26,7 @@ export const mailer = async (
       message: "Invalid parameters for sending email.",
     };
   }
-  console.log("mailer here");
+  // console.log("mailer here");
   try {
     await transporter.sendMail({
       from: "niroshshetty@gmail.com",

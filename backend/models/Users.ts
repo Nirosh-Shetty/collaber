@@ -94,15 +94,15 @@ const UserSchema = new Schema<IUser>(
 );
 
 // ✅ Hook to clean username
-UserSchema.pre("save", function (next) {
-  if (this.username) {
-    this.username = this.username
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9_]/g, "_");
-  }
-  next();
-});
+// UserSchema.pre("save", function (next) {
+//   if (this.username) {
+//     this.username = this.username
+//       .trim()
+//       .toLowerCase()
+//       .replace(/[^a-z0-9_]/g, "_");
+//   }
+//   next();
+// });
 
 // ✅ Hook to limit login history to last 10 entries
 UserSchema.pre("save", function (next) {

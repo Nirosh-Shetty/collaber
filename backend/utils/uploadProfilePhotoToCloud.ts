@@ -1,6 +1,6 @@
 // utils/uploadProfilePhotoToCloud.ts
 import cloudinary from "cloudinary";
-import axios from "axios";
+// import axios from "axios";
 import streamifier from "streamifier";
 
 cloudinary.v2.config({
