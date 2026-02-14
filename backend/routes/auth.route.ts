@@ -15,7 +15,6 @@ import {
   forgotPassword,
   resetPassword,
   setPasswordForOAuth,
-  resendPasswordResetEmail,
 } from "../controllers/auth/passowrd.controller";
 const authRouter = express.Router();
 
@@ -46,7 +45,7 @@ authRouter.get(
     session: false,
   }),
   async (req: Request, res: Response): Promise<void> => {
-    const user = req.user as IUser;
+    const user = req.user as unknown as IUser;
     // console.log(req.query);
     if (!user || typeof user !== "object") {
       res.status(401).json({ message: "Authentication failed" });
@@ -88,7 +87,7 @@ authRouter.get(
     session: false,
   }),
   (req: Request, res: Response): any => {
-    const user = req.user as IUser;
+    const user = req.user as unknown as IUser;
 
     if (!user || typeof user !== "object") {
       return res.status(401).json({ message: "Authentication failed" });
@@ -123,7 +122,6 @@ authRouter.post("/check-username-unique", checkUsernameUnique);
 
 // Password reset and forgot password
 authRouter.post("/forgot-password", forgotPassword);
-authRouter.post("/resend-password-reset-email", resendPasswordResetEmail);
 authRouter.post("/reset-password", resetPassword);
 authRouter.post("/set-password-oauth", setPasswordForOAuth); // For OAuth users to add password
 

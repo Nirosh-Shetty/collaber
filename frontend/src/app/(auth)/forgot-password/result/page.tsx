@@ -10,7 +10,8 @@ import { CheckCircleIcon } from "lucide-react";
 export default function ForgotPassword1ResultPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [countdown, setCountdown] = useState(60);
+  const RESEND_INTERVAL = 60; // seconds
+  const [countdown, setCountdown] = useState(RESEND_INTERVAL);
   const [isResending, setIsResending] = useState(false);
 
   // Get email from sessionStorage on component mount
@@ -22,6 +23,14 @@ export default function ForgotPassword1ResultPage() {
       return;
     }
     setEmail(resetEmail);
+
+    // Persist countdown across refreshes
+    const lastResend = localStorage.getItem("lastPasswordResetResend");
+    if (lastResend) {
+      const elapsed = Math.floor((Date.now() - parseInt(lastResend, 10)) / 1000);
+      const remaining = RESEND_INTERVAL - elapsed;
+      setCountdown(remaining > 0 ? remaining : 0);
+    }
   }, [router]);
 
   // Handle countdown timer
@@ -37,12 +46,14 @@ export default function ForgotPassword1ResultPage() {
 
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/resend-password-reset-email`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/forgot-password`,
         { email },
         { withCredentials: true }
       );
 
-      setCountdown(120); // Start 2 minute countdown after successful resend
+      // Store the resend timestamp
+      localStorage.setItem("lastPasswordResetResend", Date.now().toString());
+      setCountdown(RESEND_INTERVAL);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const retryAfter = error.response?.data?.retryAfter;
