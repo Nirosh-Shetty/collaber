@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
 import { usePathname, useRouter } from "next/navigation"
@@ -15,16 +15,17 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  HomeIcon,
-  FileTextIcon,
+  BellIcon,
+  BarChart3Icon,
+  ChevronRight,
   DollarSignIcon,
+  FileTextIcon,
+  HandshakeIcon,
+  HomeIcon,
+  MenuIcon,
   MessageSquareIcon,
   SettingsIcon,
-  BellIcon,
   Sparkles,
-  MenuIcon,
-  HandshakeIcon,
-  BarChart3Icon,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -37,45 +38,68 @@ const sidebarItems = [
   { title: "Messages", icon: MessageSquareIcon, url: "/influencer/messages" },
 ]
 
+const mobilePrimary = [
+  { title: "Dashboard", icon: HomeIcon, url: "/influencer/dashboard" },
+  { title: "Collabs", icon: HandshakeIcon, url: "/influencer/my-collabs" },
+  { title: "Analytics", icon: BarChart3Icon, url: "/influencer/analytics" },
+  { title: "Messages", icon: MessageSquareIcon, url: "/influencer/messages" },
+]
+
+const routeTitle: Record<string, string> = {
+  "/influencer/dashboard": "Dashboard",
+  "/influencer/my-collabs": "Collaborations",
+  "/influencer/analytics": "Analytics",
+  "/influencer/contracts": "Contracts",
+  "/influencer/earnings": "Earnings",
+  "/influencer/messages": "Messages",
+  "/influencer/settings": "Settings",
+}
+
 export default function InfluencerLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const pathname = usePathname()
-  const router = useRouter();
- const handlesignout = async () => {
+  const router = useRouter()
+
+  const pageTitle = useMemo(() => routeTitle[pathname] ?? "Influencer", [pathname])
+
+  const handleSignOut = async () => {
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signout`,
-        {}, // no body for signout
+        {},
         {
-          withCredentials: true, // Important for cookies/session handling
+          withCredentials: true,
         }
-      );
-
-      // If successful, navigate
-      router.push("/signin");
+      )
+      router.push("/signin")
     } catch (error) {
-      console.error("signout error:", error);
+      console.error("signout error:", error)
     }
-  };
+  }
+
   const SidebarItem = ({ item }: { item: (typeof sidebarItems)[0] }) => {
     const isActive = pathname === item.url
     const content = (
       <Link
         href={item.url}
-        className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "px-3"} py-2 rounded-lg text-sm font-medium transition-colors ${
+        className={`group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all ${
+          sidebarCollapsed ? "justify-center px-2" : "justify-between px-3"
+        } ${
           isActive
-            ? "bg-purple-600/20 text-purple-300 border border-purple-500/30"
-            : "text-gray-300 hover:text-white hover:bg-white/10"
+            ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         }`}
       >
-        <item.icon className={`h-4 w-4 ${sidebarCollapsed ? "" : "mr-3"}`} />
-        {!sidebarCollapsed && <span>{item.title}</span>}
+        <div className={`flex items-center ${sidebarCollapsed ? "" : "gap-3"}`}>
+          <item.icon className="h-4 w-4" />
+          {!sidebarCollapsed && <span>{item.title}</span>}
+        </div>
+        {!sidebarCollapsed && <ChevronRight className={`h-4 w-4 ${isActive ? "text-cyan-700" : "text-slate-400 group-hover:text-slate-600"}`} />}
       </Link>
     )
 
@@ -95,194 +119,90 @@ export default function InfluencerLayout({
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
-        <div className="flex h-screen">
-          {/* Sidebar - Hidden on mobile */}
-          <div
-            className={`hidden lg:block fixed inset-y-0 left-0 z-50 ${sidebarCollapsed ? "w-20" : "w-64"} bg-black/20 backdrop-blur-sm border-r border-white/10 transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-amber-50 via-white to-cyan-50">
+        <div className="pointer-events-none absolute -top-20 left-0 h-72 w-72 rounded-full bg-amber-200/35 blur-3xl" />
+        <div className="pointer-events-none absolute top-16 right-0 h-80 w-80 rounded-full bg-cyan-200/35 blur-3xl" />
+
+        <div className="relative flex min-h-screen">
+          <aside
+            className={`hidden border-r border-slate-200/70 bg-white/85 backdrop-blur-sm lg:flex lg:flex-col ${
+              sidebarCollapsed ? "w-24" : "w-72"
+            } transition-all duration-300`}
           >
-            {/* Sidebar Header */}
-            <div className="flex items-center justify-center p-4 border-b border-white/10">
-              {!sidebarCollapsed ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white">Collaber</h2>
-                    <p className="text-xs text-gray-400">Influencer Dashboard</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-3 border-b border-slate-200/70 px-5 py-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              {!sidebarCollapsed && (
+                <div>
+                  <p className="font-semibold text-slate-900">Collaber</p>
+                  <p className="text-xs text-slate-500">Creator Workspace</p>
                 </div>
               )}
             </div>
 
-            {/* Sidebar Navigation */}
-            <nav className="flex-1 px-4 py-6 space-y-2">
+            <nav className="flex-1 space-y-2 px-4 py-5">
               {sidebarItems.map((item) => (
                 <SidebarItem key={item.title} item={item} />
               ))}
             </nav>
 
-            {/* Sidebar Footer */}
-            <div className="p-4 border-t border-white/10">
-              {sidebarCollapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href="/influencer/settings"
-                      className={`flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        pathname === "/influencer/settings"
-                          ? "bg-purple-600/20 text-purple-300 border border-purple-500/30"
-                          : "text-gray-300 hover:text-white hover:bg-white/10"
-                      }`}
-                    >
-                      <SettingsIcon className="h-4 w-4" />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Settings</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Link
-                  href="/influencer/settings"
-                  className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    pathname === "/influencer/settings"
-                      ? "bg-purple-600/20 text-purple-300 border border-purple-500/30"
-                      : "text-gray-300 hover:text-white hover:bg-white/10"
-                  }`}
-                >
-                  <SettingsIcon className="h-4 w-4 mr-3" />
-                  Settings
-                </Link>
-              )}
+            <div className="border-t border-slate-200/70 p-4">
+              <Link
+                href="/influencer/settings"
+                className={`flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors ${
+                  sidebarCollapsed ? "justify-center px-2" : "gap-3 px-3"
+                } ${
+                  pathname === "/influencer/settings"
+                    ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <SettingsIcon className="h-4 w-4" />
+                {!sidebarCollapsed && <span>Settings</span>}
+              </Link>
             </div>
-          </div>
+          </aside>
 
-          {/* Mobile Floating Bottom Navigation */}
-          <div className="lg:hidden">
-            {/* Floating Bottom Nav Bar */}
-            <nav className="fixed bottom-4 left-2 right-2 sm:left-4 sm:right-4 bg-black/30 backdrop-blur-xl border border-white/20 rounded-2xl z-50 shadow-2xl">
-              <div className="flex items-center justify-center py-2 sm:py-4 px-2 sm:px-6">
-                <div className="flex items-center justify-between w-full max-w-xs sm:max-w-sm mx-auto gap-1 sm:gap-4">
-                  {[
-                    { title: "Dashboard", icon: HomeIcon, url: "/influencer/dashboard" },
-                    { title: "Collabs", icon: HandshakeIcon, url: "/influencer/my-collabs" },
-                    { title: "Analytics", icon: BarChart3Icon, url: "/influencer/analytics" },
-                    { title: "Messages", icon: MessageSquareIcon, url: "/influencer/messages" },
-                  ].map((item, index) => {
-                    const isActive = pathname === item.url
-                    return (
-                      <Link
-                        key={index}
-                        href={item.url}
-                        className={`flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl min-w-0 flex-1 transition-all duration-200 ${
-                          isActive
-                            ? "text-purple-300 bg-purple-600/40 shadow-lg border border-purple-500/30"
-                            : "text-gray-300 hover:text-white hover:bg-white/20 hover:scale-105"
-                        }`}
-                      >
-                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5 mb-0.5 sm:mb-1.5" />
-                        <span className="text-[10px] sm:text-xs font-medium truncate hidden xs:block sm:block">
-                          {item.title}
-                        </span>
-                      </Link>
-                    )
-                  })}
-                  <button
-                    onClick={() => setShowMobileMore(!showMobileMore)}
-                    className="flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl text-gray-300 min-w-0 flex-1 hover:text-white hover:bg-white/20 hover:scale-105 transition-all duration-200"
-                  >
-                    <SettingsIcon className="h-4 w-4 sm:h-5 sm:w-5 mb-0.5 sm:mb-1.5" />
-                    <span className="text-[10px] sm:text-xs font-medium hidden xs:block sm:block">More</span>
-                  </button>
-                </div>
-              </div>
-            </nav>
-
-            {/* More Panel */}
-            {showMobileMore && (
-              <>
-                <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowMobileMore(false)} />
-                <div className="fixed bottom-16 sm:bottom-24 left-2 right-2 sm:left-4 sm:right-4 bg-black/30 backdrop-blur-xl border border-white/20 rounded-2xl z-50 max-h-80 overflow-y-auto shadow-2xl">
-                  <div className="p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3">More Options</h3>
-                    <div className="space-y-2">
-                      {[
-                        { title: "Contracts", icon: FileTextIcon, url: "/influencer/contracts" },
-                        { title: "Earnings", icon: DollarSignIcon, url: "/influencer/earnings" },
-                        { title: "Settings", icon: SettingsIcon, url: "/influencer/settings" },
-                      ].map((item, index) => {
-                        const isActive = pathname === item.url
-                        return (
-                          <Link
-                            key={index}
-                            href={item.url}
-                            className={`flex items-center px-4 py-3 rounded-xl transition-colors ${
-                              isActive
-                                ? "bg-purple-600/40 text-purple-300 border border-purple-500/30"
-                                : "text-gray-300 hover:bg-white/20 hover:text-white"
-                            }`}
-                            onClick={() => setShowMobileMore(false)}
-                          >
-                            <item.icon className="h-5 w-5 mr-3" />
-                            <span className="font-medium">{item.title}</span>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Header - Fixed Position */}
-            <header className="flex-shrink-0 sticky top-0 z-40 flex h-16 items-center justify-between px-4 border-b border-white/10 bg-black/20 backdrop-blur-sm">
-              <div className="flex items-center space-x-4">
-                {/* Hamburger menu - Hidden on mobile */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-sm sm:px-6">
+              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="hidden lg:flex text-white hover:bg-white/10"
+                  className="hidden text-slate-700 hover:bg-slate-100 lg:inline-flex"
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 >
                   <MenuIcon className="h-5 w-5" />
                 </Button>
 
-                {/* Mobile logo */}
-                <div className="lg:hidden flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-white" />
+                <div className="lg:hidden flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 text-white">
+                    <Sparkles className="h-4 w-4" />
                   </div>
-                  <h2 className="text-lg font-bold text-white">Collaber</h2>
+                  <p className="font-semibold text-slate-900">Collaber</p>
+                </div>
+
+                <div className="hidden sm:block">
+                  <p className="text-sm text-slate-500">Influencer</p>
+                  <p className="text-base font-semibold text-slate-900">{pageTitle}</p>
                 </div>
               </div>
 
-              <div className="flex-1" />
-
-              <div className="flex items-center space-x-2">
-                {/* Notifications */}
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="text-slate-600 hover:bg-slate-100 hover:text-slate-900">
                   <BellIcon className="h-5 w-5" />
                 </Button>
 
-                {/* Profile Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/10 px-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">JD</span>
+                    <Button variant="ghost" className="flex items-center gap-2 px-2 text-slate-700 hover:bg-slate-100">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-cyan-300 text-sm font-semibold text-slate-800">
+                        JD
                       </div>
-                      <div className="hidden md:block text-left">
-                        <p className="text-sm font-medium">John Doe</p>
-                        <p className="text-xs text-gray-400">@johndoe</p>
+                      <div className="hidden text-left md:block">
+                        <p className="text-sm font-medium text-slate-900">John Doe</p>
+                        <p className="text-xs text-slate-500">@johndoe</p>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -293,19 +213,68 @@ export default function InfluencerLayout({
                     <DropdownMenuItem>Billing</DropdownMenuItem>
                     <DropdownMenuItem>Support</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handlesignout}>Sign Out</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </header>
 
-            {/* Main Content Area - Scrollable */}
-            <main className="flex-1 overflow-auto pb-20 sm:pb-28 lg:pb-0">{children}</main>
+            <main className="min-h-0 flex-1 overflow-auto pb-24 lg:pb-0">{children}</main>
           </div>
+        </div>
 
-          {/* Mobile sidebar overlay - Hidden on mobile since sidebar is hidden */}
-          {sidebarOpen && (
-            <div className="hidden lg:block fixed inset-0 bg-black/50 z-40" onClick={() => setSidebarOpen(false)} />
+        <div className="lg:hidden">
+          <nav className="fixed bottom-4 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-lg backdrop-blur-xl sm:left-4 sm:right-4">
+            <div className="mx-auto flex w-full max-w-md items-center justify-between gap-1">
+              {mobilePrimary.map((item) => {
+                const isActive = pathname === item.url
+                return (
+                  <Link
+                    key={item.title}
+                    href={item.url}
+                    className={`flex flex-1 flex-col items-center rounded-xl px-1 py-2 transition-colors ${
+                      isActive ? "bg-cyan-100 text-cyan-900" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="mt-1 text-[10px] font-medium">{item.title}</span>
+                  </Link>
+                )
+              })}
+              <button
+                onClick={() => setShowMobileMore(!showMobileMore)}
+                className="flex flex-1 flex-col items-center rounded-xl px-1 py-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                <SettingsIcon className="h-4 w-4" />
+                <span className="mt-1 text-[10px] font-medium">More</span>
+              </button>
+            </div>
+          </nav>
+
+          {showMobileMore && (
+            <>
+              <div className="fixed inset-0 z-40 bg-slate-900/25" onClick={() => setShowMobileMore(false)} />
+              <div className="fixed bottom-20 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur-xl sm:bottom-24 sm:left-4 sm:right-4">
+                <div className="space-y-1">
+                  {[...sidebarItems.slice(3), { title: "Settings", icon: SettingsIcon, url: "/influencer/settings" }].map((item) => {
+                    const isActive = pathname === item.url
+                    return (
+                      <Link
+                        key={item.title}
+                        href={item.url}
+                        onClick={() => setShowMobileMore(false)}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                          isActive ? "bg-cyan-100 text-cyan-900" : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
