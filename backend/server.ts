@@ -5,6 +5,11 @@ import mongoose from "mongoose";
 import router from "./routes/Route";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import passport from "passport";
+import session from "express-session";
+import "./config/passport"; // this should point to the config file above
+import initializeSocket from "./socket";
+import messagingRouter from "./routes/messaging.route";
 
 const app = express();
 
@@ -14,12 +19,24 @@ app.use(express.json());
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "role"],
   })
 );
+
+// Session (required by some strategies, even if you disable it later)
+app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
+
+// Passport init
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Trust proxy for secure cookies in production (if behind a reverse proxy)
+app.set("trust proxy", true);
+
 app.use("/api", router);
+app.use("/api/messaging", messagingRouter);
 
 const PORT = process.env.PORT || 8000;
 const MONGO_URI = process.env.MONGO_URI;
@@ -41,20 +58,11 @@ const connectDB = async () => {
 
 connectDB(); // Call the function to establish the connection
 
-app.listen(PORT, () => {
+// Initialize Socket.io (creates HTTP server and attaches Express to it)
+const {httpServer} = initializeSocket(app);
+
+// Start single server with both Express and Socket.io
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running at: http://localhost:${PORT}`);
+  console.log(`📡 Socket.io ready`);
 });
-
-import passport from "passport";
-import session from "express-session";
-import "./config/passport"; // this should point to the config file above
-
-// Session (required by some strategies, even if you disable it later)
-app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
-
-// Passport init
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Trust proxy for secure cookies in production (if behind a reverse proxy)
-app.set("trust proxy", true);

@@ -1,35 +1,34 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import axios from "axios"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  Home,
-  Users,
   BarChart3,
-  MessageSquare,
-  FileText,
-  TrendingUp,
-  Calendar,
-  Settings,
   Bell,
-  User,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
   Briefcase,
+  Calendar,
+  ChevronRight,
+  FileText,
+  Home,
+  MessageSquare,
+  Settings,
+  TrendingUp,
+  Users,
+  MenuIcon,
 } from "lucide-react"
 
 const sidebarItems = [
@@ -41,8 +40,26 @@ const sidebarItems = [
   { name: "Contracts", href: "/manager/contracts", icon: FileText },
   { name: "Schedule", href: "/manager/schedule", icon: Calendar },
   { name: "Reports", href: "/manager/reports", icon: BarChart3 },
-  { name: "Settings", href: "/manager/settings", icon: Settings },
 ]
+
+const mobilePrimary = [
+  { name: "Dashboard", href: "/manager/dashboard", icon: Home },
+  { name: "Influencers", href: "/manager/influencers", icon: Users },
+  { name: "Campaigns", href: "/manager/campaigns", icon: TrendingUp },
+  { name: "Messages", href: "/manager/messages", icon: MessageSquare },
+]
+
+const routeTitle: Record<string, string> = {
+  "/manager/dashboard": "Dashboard",
+  "/manager/influencers": "Influencers",
+  "/manager/campaigns": "Campaigns",
+  "/manager/analytics": "Analytics",
+  "/manager/messages": "Messages",
+  "/manager/contracts": "Contracts",
+  "/manager/schedule": "Schedule",
+  "/manager/reports": "Reports",
+  "/manager/settings": "Settings",
+}
 
 function SidebarItem({ item, isCollapsed }: { item: (typeof sidebarItems)[0]; isCollapsed: boolean }) {
   const pathname = usePathname()
@@ -51,14 +68,19 @@ function SidebarItem({ item, isCollapsed }: { item: (typeof sidebarItems)[0]; is
   const content = (
     <Link
       href={item.href}
-      className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"} px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      className={`group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all ${
+        isCollapsed ? "justify-center px-2" : "justify-between px-3"
+      } ${
         isActive
-          ? "bg-purple-600/20 text-purple-300 border border-purple-500/30"
-          : "text-gray-300 hover:text-white hover:bg-white/10"
+          ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
       }`}
     >
-      <item.icon className={`h-5 w-5 ${isCollapsed ? "" : "mr-3"}`} />
-      {!isCollapsed && <span>{item.name}</span>}
+      <div className={`flex items-center ${isCollapsed ? "" : "gap-3"}`}>
+        <item.icon className="h-4 w-4" />
+        {!isCollapsed && <span>{item.name}</span>}
+      </div>
+      {!isCollapsed && <ChevronRight className={`h-4 w-4 ${isActive ? "text-cyan-700 dark:text-cyan-400" : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300"}`} />}
     </Link>
   )
 
@@ -76,209 +98,184 @@ function SidebarItem({ item, isCollapsed }: { item: (typeof sidebarItems)[0]; is
   return content
 }
 
-export default function ManagerLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-   const handlesignout = async () => {
+
+  const pageTitle = useMemo(() => routeTitle[pathname] ?? "Manager Workspace", [pathname])
+
+  const handleSignOut = async () => {
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signout`,
-        {}, // no body for signout
+        {},
         {
-          withCredentials: true, // Important for cookies/session handling
+          withCredentials: true,
         }
-      );
-
-      // If successful, navigate
-      router.push("/signin");
+      )
+      router.push("/signin")
     } catch (error) {
-      console.error("signout error:", error);
+      console.error("signout error:", error)
     }
-  };
+  }
+
   return (
     <TooltipProvider>
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex overflow-hidden">
-        {/* Mobile sidebar overlay - Hidden on mobile since sidebar is hidden */}
-        {sidebarOpen && (
-          <div className="hidden lg:block fixed inset-0 z-40 bg-black/50" onClick={() => setSidebarOpen(false)} />
-        )}
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-amber-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <div className="pointer-events-none absolute -top-20 left-0 h-72 w-72 rounded-full bg-amber-200/35 blur-3xl dark:bg-cyan-500/15" />
+        <div className="pointer-events-none absolute top-16 right-0 h-80 w-80 rounded-full bg-cyan-200/35 blur-3xl dark:bg-emerald-500/10" />
 
-        {/* Sidebar - Hidden on mobile */}
-        <div
-          className={`hidden lg:block ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 ${
-            sidebarCollapsed ? "w-20" : "w-64"
-          } bg-black/20 backdrop-blur-xl border-r border-white/10 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-0`}
-        >
-          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
-            {!sidebarCollapsed && (
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">M</span>
+        <div className="relative flex min-h-screen">
+          <aside
+            className={`hidden border-r border-slate-200/70 bg-white/85 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/85 lg:flex lg:flex-col ${
+              sidebarCollapsed ? "w-24" : "w-72"
+            } transition-all duration-300`}
+          >
+            <div className="flex items-center gap-3 border-b border-slate-200/70 px-5 py-4 dark:border-slate-800/80">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-sm">
+                <Briefcase className="h-5 w-5" />
+              </div>
+              {!sidebarCollapsed && (
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">Collaber</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Manager Workspace</p>
                 </div>
-                <span className="ml-2 text-white font-semibold">ManagerHub</span>
-              </div>
-            )}
-            {sidebarCollapsed && (
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto">
-                <span className="text-white font-bold text-sm">M</span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <nav className="mt-8 px-4 space-y-2">
-            {sidebarItems.map((item) => (
-              <SidebarItem key={item.name} item={item} isCollapsed={sidebarCollapsed} />
-            ))}
-          </nav>
-        </div>
+            <nav className="flex-1 space-y-2 px-4 py-5">
+              {sidebarItems.map((item) => (
+                <SidebarItem key={item.name} item={item} isCollapsed={sidebarCollapsed} />
+              ))}
+            </nav>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
-          <header className="flex-shrink-0 sticky top-0 z-40 bg-black/20 backdrop-blur-xl border-b border-white/10 px-4 lg:px-6 h-16">
-            <div className="flex items-center justify-between h-full">
-              <div className="flex items-center">
-                {/* Hamburger menu - Hidden on mobile */}
+            <div className="border-t border-slate-200/70 p-4 dark:border-slate-800/80">
+              <Link
+                href="/manager/settings"
+                className={`flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors ${
+                  sidebarCollapsed ? "justify-center px-2" : "gap-3 px-3"
+                } ${
+                  pathname === "/manager/settings"
+                    ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                }`}
+              >
+                <Settings className="h-4 w-4" />
+                {!sidebarCollapsed && <span>Settings</span>}
+              </Link>
+            </div>
+          </aside>
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/80 sm:px-6">
+              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
+                  className="hidden text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 lg:inline-flex"
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="hidden lg:flex text-gray-400 hover:text-white"
                 >
-                  {sidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+                  <MenuIcon className="h-5 w-5" />
                 </Button>
 
-                {/* Mobile logo */}
-                <div className="lg:hidden flex items-center">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">M</span>
+                <div className="lg:hidden flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 text-white">
+                    <Briefcase className="h-4 w-4" />
                   </div>
-                  <span className="ml-2 text-white font-semibold">ManagerHub</span>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">Collaber</p>
+                </div>
+
+                <div className="hidden sm:block">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Manager</p>
+                  <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{pageTitle}</p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <Button variant="ghost" size="icon" className="text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
                   <Bell className="h-5 w-5" />
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/10">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                        <Briefcase className="h-4 w-4 text-white" />
+                    <Button variant="ghost" className="flex items-center gap-2 px-2 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-cyan-300 text-sm font-semibold text-slate-800">
+                        SM
                       </div>
-                      <div className="hidden md:block text-left">
-                        <div className="text-sm font-medium">Sarah Manager</div>
-                        <div className="text-xs text-gray-400">Manager Account</div>
+                      <div className="hidden text-left md:block">
+                        <p className="text-sm font-medium text-slate-900">Sarah Manager</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Manager Account</p>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-gray-900 border-gray-700">
-                    <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-800">
-                      <User className="mr-2 h-4 w-4" />
-                      Manager Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-800">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Account Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-gray-700" />
-                    <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-800" onClick={handlesignout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Manager Profile</DropdownMenuItem>
+                    <DropdownMenuItem>Account Settings</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </div>
-          </header>
+            </header>
 
-          {/* Main content area */}
-          <main className="flex-1 overflow-auto pb-20 sm:pb-28 lg:pb-0">{children}</main>
+            <main className="min-h-0 flex-1 overflow-auto pb-24 lg:pb-0">{children}</main>
+          </div>
         </div>
 
-        {/* Mobile Floating Bottom Navigation */}
         <div className="lg:hidden">
-          {/* Floating Bottom Nav Bar */}
-          <nav className="fixed bottom-4 left-2 right-2 sm:left-4 sm:right-4 bg-black/30 backdrop-blur-xl border border-white/20 rounded-2xl z-50 shadow-2xl">
-            <div className="flex items-center justify-center py-2 sm:py-4 px-2 sm:px-6">
-              <div className="flex items-center justify-between w-full max-w-xs sm:max-w-sm mx-auto gap-1 sm:gap-4">
-                {[
-                  { name: "Dashboard", href: "/manager/dashboard", icon: Home },
-                  { name: "Influencers", href: "/manager/influencers", icon: Users },
-                  { name: "Campaigns", href: "/manager/campaigns", icon: TrendingUp },
-                  { name: "Messages", href: "/manager/messages", icon: MessageSquare },
-                ].map((item, index) => {
-                  const isActive = pathname === item.href
-                  return (
-                    <Link
-                      key={index}
-                      href={item.href}
-                      className={`flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl min-w-0 flex-1 transition-all duration-200 ${
-                        isActive
-                          ? "text-purple-300 bg-purple-600/40 shadow-lg border border-purple-500/30"
-                          : "text-gray-300 hover:text-white hover:bg-white/20 hover:scale-105"
-                      }`}
-                    >
-                      <item.icon className="h-4 w-4 sm:h-5 sm:w-5 mb-0.5 sm:mb-1.5" />
-                      <span className="text-[10px] sm:text-xs font-medium truncate hidden xs:block sm:block">
-                        {item.name}
-                      </span>
-                    </Link>
-                  )
-                })}
-                <button
-                  onClick={() => setShowMobileMore(!showMobileMore)}
-                  className="flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl text-gray-300 min-w-0 flex-1 hover:text-white hover:bg-white/20 hover:scale-105 transition-all duration-200"
-                >
-                  <Settings className="h-4 w-4 sm:h-5 sm:w-5 mb-0.5 sm:mb-1.5" />
-                  <span className="text-[10px] sm:text-xs font-medium hidden xs:block sm:block">More</span>
-                </button>
-              </div>
+          <nav className="fixed bottom-4 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:left-4 sm:right-4">
+            <div className="mx-auto flex w-full max-w-md items-center justify-between gap-1">
+              {mobilePrimary.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex flex-1 flex-col items-center rounded-xl px-1 py-2 transition-colors ${
+                      isActive ? "bg-cyan-100 text-cyan-900 dark:bg-cyan-500/20 dark:text-cyan-300" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="mt-1 text-[10px] font-medium">{item.name}</span>
+                  </Link>
+                )
+              })}
+              <button
+                onClick={() => setShowMobileMore(!showMobileMore)}
+                className="flex flex-1 flex-col items-center rounded-xl px-1 py-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="mt-1 text-[10px] font-medium">More</span>
+              </button>
             </div>
           </nav>
 
-          {/* More Panel */}
           {showMobileMore && (
             <>
-              <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowMobileMore(false)} />
-              <div className="fixed bottom-16 sm:bottom-24 left-2 right-2 sm:left-4 sm:right-4 bg-black/30 backdrop-blur-xl border border-white/20 rounded-2xl z-50 max-h-80 overflow-y-auto shadow-2xl">
-                <div className="p-4">
-                  <h3 className="text-sm font-semibold text-white mb-3">More Options</h3>
-                  <div className="space-y-2">
-                    {[
-                      { name: "Analytics", href: "/manager/analytics", icon: BarChart3 },
-                      { name: "Contracts", href: "/manager/contracts", icon: FileText },
-                      { name: "Schedule", href: "/manager/schedule", icon: Calendar },
-                      { name: "Reports", href: "/manager/reports", icon: BarChart3 },
-                      { name: "Settings", href: "/manager/settings", icon: Settings },
-                    ].map((item, index) => {
-                      const isActive = pathname === item.href
-                      return (
-                        <Link
-                          key={index}
-                          href={item.href}
-                          className={`flex items-center px-4 py-3 rounded-xl sm:rounded-2xl transition-colors ${
-                            isActive
-                              ? "bg-purple-600/40 text-purple-300 border border-purple-500/30"
-                              : "text-gray-300 hover:bg-white/20 hover:text-white"
-                          }`}
-                          onClick={() => setShowMobileMore(false)}
-                        >
-                          <item.icon className="h-5 w-5" />
-                          <span className="font-medium">{item.name}</span>
-                        </Link>
-                      )
-                    })}
-                  </div>
+              <div className="fixed inset-0 z-40 bg-slate-900/40" onClick={() => setShowMobileMore(false)} />
+              <div className="fixed bottom-20 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 sm:bottom-24 sm:left-4 sm:right-4">
+                <div className="space-y-1">
+                  {[...sidebarItems.slice(4), { name: "Settings", href: "/manager/settings", icon: Settings }].map((item) => {
+                    const isActive = pathname === item.href
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setShowMobileMore(false)}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                          isActive ? "bg-cyan-100 text-cyan-900 dark:bg-cyan-500/20 dark:text-cyan-300" : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
             </>

@@ -3,6 +3,7 @@
 import type React from "react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import axios from "axios"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -22,6 +23,7 @@ import {
   FileTextIcon,
   HandshakeIcon,
   HomeIcon,
+  InboxIcon,
   MenuIcon,
   MessageSquareIcon,
   SettingsIcon,
@@ -36,6 +38,7 @@ const sidebarItems = [
   { title: "Contracts", icon: FileTextIcon, url: "/influencer/contracts" },
   { title: "Earnings", icon: DollarSignIcon, url: "/influencer/earnings" },
   { title: "Messages", icon: MessageSquareIcon, url: "/influencer/messages" },
+  { title: "Invites", icon: InboxIcon, url: "/influencer/invites" },
 ]
 
 const mobilePrimary = [
@@ -52,6 +55,7 @@ const routeTitle: Record<string, string> = {
   "/influencer/contracts": "Contracts",
   "/influencer/earnings": "Earnings",
   "/influencer/messages": "Messages",
+  "/influencer/invites": "Invites",
   "/influencer/settings": "Settings",
 }
 
@@ -92,14 +96,14 @@ export default function InfluencerLayout({
         } ${
           isActive
             ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
         }`}
       >
         <div className={`flex items-center ${sidebarCollapsed ? "" : "gap-3"}`}>
           <item.icon className="h-4 w-4" />
           {!sidebarCollapsed && <span>{item.title}</span>}
         </div>
-        {!sidebarCollapsed && <ChevronRight className={`h-4 w-4 ${isActive ? "text-cyan-700" : "text-slate-400 group-hover:text-slate-600"}`} />}
+        {!sidebarCollapsed && <ChevronRight className={`h-4 w-4 ${isActive ? "text-cyan-700 dark:text-cyan-400" : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300"}`} />}
       </Link>
     )
 
@@ -119,24 +123,24 @@ export default function InfluencerLayout({
 
   return (
     <TooltipProvider>
-      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-amber-50 via-white to-cyan-50">
-        <div className="pointer-events-none absolute -top-20 left-0 h-72 w-72 rounded-full bg-amber-200/35 blur-3xl" />
-        <div className="pointer-events-none absolute top-16 right-0 h-80 w-80 rounded-full bg-cyan-200/35 blur-3xl" />
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-amber-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <div className="pointer-events-none absolute -top-20 left-0 h-72 w-72 rounded-full bg-amber-200/35 blur-3xl dark:bg-cyan-500/15" />
+        <div className="pointer-events-none absolute top-16 right-0 h-80 w-80 rounded-full bg-cyan-200/35 blur-3xl dark:bg-emerald-500/10" />
 
         <div className="relative flex min-h-screen">
           <aside
-            className={`hidden border-r border-slate-200/70 bg-white/85 backdrop-blur-sm lg:flex lg:flex-col ${
+            className={`hidden border-r border-slate-200/70 bg-white/85 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/85 lg:flex lg:flex-col ${
               sidebarCollapsed ? "w-24" : "w-72"
             } transition-all duration-300`}
           >
-            <div className="flex items-center gap-3 border-b border-slate-200/70 px-5 py-4">
+            <div className="flex items-center gap-3 border-b border-slate-200/70 px-5 py-4 dark:border-slate-800/80">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-sm">
                 <Sparkles className="h-5 w-5" />
               </div>
               {!sidebarCollapsed && (
                 <div>
-                  <p className="font-semibold text-slate-900">Collaber</p>
-                  <p className="text-xs text-slate-500">Creator Workspace</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">Collaber</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Creator Workspace</p>
                 </div>
               )}
             </div>
@@ -147,7 +151,7 @@ export default function InfluencerLayout({
               ))}
             </nav>
 
-            <div className="border-t border-slate-200/70 p-4">
+            <div className="border-t border-slate-200/70 p-4 dark:border-slate-800/80">
               <Link
                 href="/influencer/settings"
                 className={`flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors ${
@@ -155,7 +159,7 @@ export default function InfluencerLayout({
                 } ${
                   pathname === "/influencer/settings"
                     ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                 }`}
               >
                 <SettingsIcon className="h-4 w-4" />
@@ -165,12 +169,12 @@ export default function InfluencerLayout({
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-sm sm:px-6">
+            <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/80 sm:px-6">
               <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="hidden text-slate-700 hover:bg-slate-100 lg:inline-flex"
+                  className="hidden text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 lg:inline-flex"
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 >
                   <MenuIcon className="h-5 w-5" />
@@ -180,29 +184,30 @@ export default function InfluencerLayout({
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 text-white">
                     <Sparkles className="h-4 w-4" />
                   </div>
-                  <p className="font-semibold text-slate-900">Collaber</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">Collaber</p>
                 </div>
 
                 <div className="hidden sm:block">
-                  <p className="text-sm text-slate-500">Influencer</p>
-                  <p className="text-base font-semibold text-slate-900">{pageTitle}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Influencer</p>
+                  <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{pageTitle}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+                <ThemeToggle />
+                <Button variant="ghost" size="icon" className="text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
                   <BellIcon className="h-5 w-5" />
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center gap-2 px-2 text-slate-700 hover:bg-slate-100">
+                    <Button variant="ghost" className="flex items-center gap-2 px-2 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-cyan-300 text-sm font-semibold text-slate-800">
                         JD
                       </div>
                       <div className="hidden text-left md:block">
                         <p className="text-sm font-medium text-slate-900">John Doe</p>
-                        <p className="text-xs text-slate-500">@johndoe</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">@johndoe</p>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -224,7 +229,7 @@ export default function InfluencerLayout({
         </div>
 
         <div className="lg:hidden">
-          <nav className="fixed bottom-4 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-lg backdrop-blur-xl sm:left-4 sm:right-4">
+          <nav className="fixed bottom-4 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:left-4 sm:right-4">
             <div className="mx-auto flex w-full max-w-md items-center justify-between gap-1">
               {mobilePrimary.map((item) => {
                 const isActive = pathname === item.url
@@ -233,7 +238,7 @@ export default function InfluencerLayout({
                     key={item.title}
                     href={item.url}
                     className={`flex flex-1 flex-col items-center rounded-xl px-1 py-2 transition-colors ${
-                      isActive ? "bg-cyan-100 text-cyan-900" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                      isActive ? "bg-cyan-100 text-cyan-900 dark:bg-cyan-500/20 dark:text-cyan-300" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -243,7 +248,7 @@ export default function InfluencerLayout({
               })}
               <button
                 onClick={() => setShowMobileMore(!showMobileMore)}
-                className="flex flex-1 flex-col items-center rounded-xl px-1 py-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                className="flex flex-1 flex-col items-center rounded-xl px-1 py-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 <SettingsIcon className="h-4 w-4" />
                 <span className="mt-1 text-[10px] font-medium">More</span>
@@ -253,8 +258,8 @@ export default function InfluencerLayout({
 
           {showMobileMore && (
             <>
-              <div className="fixed inset-0 z-40 bg-slate-900/25" onClick={() => setShowMobileMore(false)} />
-              <div className="fixed bottom-20 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur-xl sm:bottom-24 sm:left-4 sm:right-4">
+              <div className="fixed inset-0 z-40 bg-slate-900/40" onClick={() => setShowMobileMore(false)} />
+              <div className="fixed bottom-20 left-2 right-2 z-50 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 sm:bottom-24 sm:left-4 sm:right-4">
                 <div className="space-y-1">
                   {[...sidebarItems.slice(3), { title: "Settings", icon: SettingsIcon, url: "/influencer/settings" }].map((item) => {
                     const isActive = pathname === item.url
@@ -264,7 +269,7 @@ export default function InfluencerLayout({
                         href={item.url}
                         onClick={() => setShowMobileMore(false)}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                          isActive ? "bg-cyan-100 text-cyan-900" : "text-slate-700 hover:bg-slate-100"
+                          isActive ? "bg-cyan-100 text-cyan-900 dark:bg-cyan-500/20 dark:text-cyan-300" : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                         }`}
                       >
                         <item.icon className="h-4 w-4" />

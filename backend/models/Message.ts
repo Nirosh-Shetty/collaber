@@ -6,6 +6,8 @@ export interface IMessage extends Document {
   text?: string;
   mediaUrl?: string;
   mediaType?: "image" | "video" | "file";
+  read: boolean;
+  readAt?: Date;
   isDeleted: boolean;
   createdAt: Date;
 }
@@ -35,6 +37,17 @@ const MessageSchema = new Schema<IMessage>(
     mediaType: {
       type: String,
       enum: ["image", "video", "file"],
+    },
+
+    read: {
+      type: Boolean,
+      default: false,
+      index: true, // for filtering unread messages
+    },
+
+    readAt: {
+      type: Date,
+      default: null,
     },
 
     isDeleted: {
