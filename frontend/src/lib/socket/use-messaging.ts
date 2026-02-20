@@ -40,6 +40,12 @@ export const useMessaging = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  console.log("🎣 useMessaging hook called - socket state:", {
+    socketExists: !!socket,
+    isConnected,
+    socketId: socket?.id,
+  });
+
   // Join conversation room
   const joinConversation = useCallback(
     (conversationId: string) => {
@@ -83,17 +89,31 @@ export const useMessaging = () => {
       mediaUrl?: string,
       mediaType?: "image" | "video" | "file"
     ) => {
-      if (!socket || !isConnected) {
+      console.log("🔷 useMessaging.sendMessage called:", { conversationId, text, socket: !!socket, isConnected });
+
+      if (!socket) {
+        console.error("❌ Socket is null");
+        setError("Socket not initialized");
+        return;
+      }
+
+      if (!isConnected) {
+        console.error("❌ Socket not connected", { isConnected });
         setError("Socket not connected");
         return;
       }
 
+      console.log("✅ Socket connected, emitting send-message event");
       socket.emit(
         "send-message",
         { conversationId, text, mediaUrl, mediaType },
         (response: any) => {
+          console.log("📬 send-message callback response:", response);
           if (!response.success) {
+            console.error("❌ Message send failed:", response.message);
             setError(response.message);
+          } else {
+            console.log("✅ Message sent successfully");
           }
         }
       );

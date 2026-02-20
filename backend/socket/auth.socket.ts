@@ -23,6 +23,7 @@ export const socketAuthMiddleware = (socket: any, next: any) => {
     }
 
     if (!token) {
+      console.error("❌ Socket auth: No token provided");
       return next(new Error("No token provided"));
     }
 
@@ -30,15 +31,17 @@ export const socketAuthMiddleware = (socket: any, next: any) => {
     const decoded = jwt.verify(
       token,
       process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET!
-    ) as AccessTokenPayload;
+    ) as any;
 
-    socket.userId = decoded.uid;
+    // Handle both token formats: { id, role } and { uid, role, username }
+    socket.userId = decoded.id || decoded.uid;
     socket.userRole = decoded.role;
-    socket.username = decoded.username;
+    socket.username = decoded.username || "";
 
+    console.log("✅ Socket auth successful:", { userId: socket.userId, role: socket.userRole });
     next();
   } catch (err) {
-    console.error("Socket auth error:", err);
+    console.error("❌ Socket auth error:", err);
     next(new Error("Authentication failed"));
   }
 };

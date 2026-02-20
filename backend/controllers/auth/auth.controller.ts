@@ -557,3 +557,29 @@ export const getOAuthSession = async (
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// Get socket token - returns the auth token from httpOnly cookie
+// This is needed because frontend cannot read httpOnly cookies, but can use this endpoint
+export const getSocketToken = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const token = req.cookies.auth_token;
+    
+    if (!token) {
+      console.log("❌ No auth_token cookie found");
+      console.log("   Available cookies:", Object.keys(req.cookies));
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    console.log("✅ Returning socket token to frontend");
+    // Return token (not httpOnly, so frontend can read it)
+    return res.status(200).json({
+      token,
+    });
+  } catch (error) {
+    console.error("Error getting socket token:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
