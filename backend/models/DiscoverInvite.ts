@@ -3,6 +3,7 @@ import { Schema, model, Document } from "mongoose";
 export interface IDiscoverInvite extends Document {
   brandId: string;
   influencerId: string;
+  campaignId: string;
   campaignLabel?: string;
   note?: string;
   status: "pending" | "accepted" | "rejected" | "expired";
@@ -18,6 +19,11 @@ const DiscoverInviteSchema = new Schema<IDiscoverInvite>(
       index: true,
     },
     influencerId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    campaignId: {
       type: String,
       required: true,
       index: true,
@@ -42,6 +48,6 @@ const DiscoverInviteSchema = new Schema<IDiscoverInvite>(
   { timestamps: true }
 );
 
-DiscoverInviteSchema.index({ brandId: 1, influencerId: 1, status: 1 });
+DiscoverInviteSchema.index({ brandId: 1, influencerId: 1, campaignId: 1, status: 1 });
 
 export default model<IDiscoverInvite>("DiscoverInvite", DiscoverInviteSchema);

@@ -8,9 +8,11 @@ import {
   signUpBasicInfo,
   verifyOtp,
   getOAuthSession,
+  getSocketToken,
 } from "../controllers/auth/auth.controller";
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
+import { authMiddleware } from "../middleware/auth";
 import { checkUsernameUnique } from "../controllers/checkUsernameUnique.controller";
 import {
   forgotPassword,
@@ -117,6 +119,10 @@ authRouter.post("/signup/verify-otp", verifyOtp);
 //when user tries to login through google/facebook and the user is not registered yet, then we store the profile info in a short-lived cookie and redirect to the role selection page
 authRouter.get("/get-oauth-session", getOAuthSession);
 authRouter.post("/complete-social-auth", completeSocialAuth);
+
+// Get socket token endpoint - for frontend to fetch token from httpOnly cookie
+// Protected with auth middleware to ensure only authenticated users can fetch tokens
+authRouter.get("/get-socket-token", authMiddleware, getSocketToken);
 
 authRouter.post("/signout", signout);
 

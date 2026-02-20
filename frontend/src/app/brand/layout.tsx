@@ -51,6 +51,7 @@ const mobilePrimary = [
 const routeTitle: Record<string, string> = {
   "/brand/dashboard": "Dashboard",
   "/brand/campaigns": "Campaigns",
+  "/brand/campaigns/new": "New Campaign",
   "/brand/influencers": "Influencers",
   "/brand/analytics": "Analytics",
   "/brand/messages": "Messages",
@@ -102,7 +103,10 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router = useRouter()
 
-  const pageTitle = useMemo(() => routeTitle[pathname] ?? "Brand Workspace", [pathname])
+  const pageTitle = useMemo(() => {
+    if (pathname.startsWith("/brand/campaigns/")) return "Campaign Detail"
+    return routeTitle[pathname] ?? "Brand Workspace"
+  }, [pathname])
 
   const handleSignOut = async () => {
     try {

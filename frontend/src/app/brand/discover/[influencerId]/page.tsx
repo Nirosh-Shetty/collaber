@@ -39,6 +39,24 @@ type PublicProfile = {
   highlights: string[]
 }
 
+type BrandInviteItem = {
+  influencerId: string
+  status: "pending" | "accepted" | "rejected" | "expired"
+}
+
+type BrandInviteListResponse = {
+  items?: BrandInviteItem[]
+}
+
+type CampaignOption = {
+  id: string
+  name: string
+}
+
+type CampaignListResponse = {
+  items?: CampaignOption[]
+}
+
 const previewProfiles: Record<string, PublicProfile> = {
   seed_1: {
     id: "seed_1",
@@ -109,6 +127,13 @@ export default function DiscoverProfilePage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [inviteBusy, setInviteBusy] = useState(false)
+  const [inviteStatus, setInviteStatus] = useState<"pending" | "accepted" | "rejected" | "expired" | null>(null)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([])
+  const [selectedCampaignId, setSelectedCampaignId] = useState("")
+
+  const isPreviewProfile = Boolean(influencerId && previewProfiles[influencerId])
 
   useEffect(() => {
     if (!influencerId) return
@@ -152,6 +177,126 @@ export default function DiscoverProfilePage() {
     return () => controller.abort()
   }, [influencerId])
 
+  useEffect(() => {
+    if (!influencerId || isPreviewProfile) {
+      setInviteStatus(null)
+      return
+    }
+
+    const controller = new AbortController()
+
+    const loadInviteStatus = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/discover/invites?status=all&limit=50`,
+          {
+            credentials: "include",
+            signal: controller.signal,
+          }
+        )
+
+        if (!response.ok) return
+
+        const data: BrandInviteListResponse = await response.json()
+        const items = Array.isArray(data?.items) ? data.items : []
+        const currentInvite = items.find((item) => String(item?.influencerId) === String(influencerId))
+        setInviteStatus(currentInvite?.status || null)
+      } catch {
+        setInviteStatus(null)
+      }
+    }
+
+    loadInviteStatus()
+    return () => controller.abort()
+  }, [influencerId, isPreviewProfile])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const loadCampaigns = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/campaigns?limit=50`, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+        if (!response.ok) return
+
+        const data: CampaignListResponse = await response.json()
+        const items = Array.isArray(data.items) ? data.items : []
+        setCampaigns(items)
+        if (items.length > 0) {
+          setSelectedCampaignId((prev) => prev || items[0].id)
+        }
+      } catch {
+        // Ignore campaign loading failures here.
+      }
+    }
+
+    loadCampaigns()
+    return () => controller.abort()
+  }, [])
+
+  const sendInvite = async () => {
+    if (!profile || !influencerId) return
+
+    if (isPreviewProfile) {
+      setActionMessage("Preview profile cannot receive live invites.")
+      return
+    }
+
+    if (inviteStatus === "pending") {
+      setActionMessage("Invite already pending for this creator.")
+      return
+    }
+    if (!selectedCampaignId) {
+      setActionMessage("Select a campaign before sending invite.")
+      return
+    }
+
+    setInviteBusy(true)
+    setActionMessage(null)
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/discover/invites`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          influencerIds: [influencerId],
+          campaignId: selectedCampaignId,
+          campaignLabel:
+            campaigns.find((campaign) => campaign.id === selectedCampaignId)?.name || "Profile Outreach",
+          note: `Invite sent from profile view (${profile.handle || profile.name}).`,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to send invite")
+      }
+
+      const data = await response.json()
+      const created = Array.isArray(data?.created) ? data.created : []
+      const skipped = Array.isArray(data?.skipped) ? data.skipped : []
+
+      if (created.length > 0) {
+        setInviteStatus("pending")
+        setActionMessage("Invite sent successfully.")
+        return
+      }
+
+      if (skipped.length > 0) {
+        setActionMessage("Invite already exists or creator is not eligible.")
+        return
+      }
+
+      setActionMessage("Invite request processed.")
+    } catch {
+      setActionMessage("Could not send invite right now.")
+    } finally {
+      setInviteBusy(false)
+    }
+  }
+
   const socialEntries = useMemo(
     () => Object.entries(profile?.socialLinks || {}).filter(([, value]) => Boolean(value)),
     [profile?.socialLinks]
@@ -177,6 +322,11 @@ export default function DiscoverProfilePage() {
       {error ? (
         <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
           <CardContent className="p-6 text-sm text-rose-600 dark:text-rose-300">{error}</CardContent>
+        </Card>
+      ) : null}
+      {actionMessage ? (
+        <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+          <CardContent className="p-4 text-sm text-emerald-700 dark:text-emerald-300">{actionMessage}</CardContent>
         </Card>
       ) : null}
 
@@ -212,9 +362,31 @@ export default function DiscoverProfilePage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-cyan-600 dark:hover:bg-cyan-700">
+                  <select
+                    value={selectedCampaignId}
+                    onChange={(event) => setSelectedCampaignId(event.target.value)}
+                    className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">Select campaign</option>
+                    {campaigns.map((campaign) => (
+                      <option key={campaign.id} value={campaign.id}>
+                        {campaign.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={sendInvite}
+                    disabled={inviteBusy || inviteStatus === "pending"}
+                    className="bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-cyan-600 dark:hover:bg-cyan-700"
+                  >
                     <HeartHandshake className="mr-2 h-4 w-4" />
-                    Invite to campaign
+                    {inviteStatus === "pending"
+                      ? "Invite pending"
+                      : inviteBusy
+                        ? "Sending invite..."
+                        : inviteStatus === "accepted" || inviteStatus === "rejected" || inviteStatus === "expired"
+                          ? "Invite again"
+                          : "Invite to campaign"}
                   </Button>
                   <Button asChild variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
                     <Link href={`/brand/messages`}>

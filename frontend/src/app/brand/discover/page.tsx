@@ -47,6 +47,7 @@ type DiscoverResponse = {
 type SentInvite = {
   id: string
   influencerId: string
+  campaignId: string
   influencerName: string
   influencerHandle: string
   influencerNiche: string
@@ -58,6 +59,15 @@ type SentInvite = {
 
 type SentInviteResponse = {
   items: SentInvite[]
+}
+
+type CampaignOption = {
+  id: string
+  name: string
+}
+
+type CampaignListResponse = {
+  items?: CampaignOption[]
 }
 
 const seedCreators: Creator[] = [
@@ -110,6 +120,8 @@ export default function DiscoverPage() {
   const [shortlistBusyIds, setShortlistBusyIds] = useState<string[]>([])
   const [inviteBusy, setInviteBusy] = useState(false)
   const [sentInvites, setSentInvites] = useState<SentInvite[]>([])
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([])
+  const [selectedCampaignId, setSelectedCampaignId] = useState("")
 
   const fetchSentInvites = useCallback(async () => {
     try {
@@ -195,6 +207,32 @@ export default function DiscoverPage() {
     fetchSentInvites()
   }, [fetchSentInvites])
 
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const loadCampaigns = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/campaigns?limit=50`, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+        if (!response.ok) return
+
+        const data: CampaignListResponse = await response.json()
+        const items = Array.isArray(data.items) ? data.items : []
+        setCampaigns(items)
+        if (items.length > 0) {
+          setSelectedCampaignId((previous) => previous || items[0].id)
+        }
+      } catch {
+        // Keep discover usable without campaign list.
+      }
+    }
+
+    loadCampaigns()
+    return () => controller.abort()
+  }, [])
+
   const filteredCreators = useMemo(() => {
     return creators.filter((creator) => {
       const matchesSearch =
@@ -255,6 +293,10 @@ export default function DiscoverPage() {
 
   const sendInvites = async (influencerIds: string[]) => {
     if (!influencerIds.length) return
+    if (!selectedCampaignId) {
+      setActionMessage("Select a campaign before sending invites.")
+      return
+    }
     setInviteBusy(true)
     setActionMessage(null)
 
@@ -265,7 +307,8 @@ export default function DiscoverPage() {
         credentials: "include",
         body: JSON.stringify({
           influencerIds,
-          campaignLabel: "Discover Outreach",
+          campaignId: selectedCampaignId,
+          campaignLabel: campaigns.find((campaign) => campaign.id === selectedCampaignId)?.name || "Discover Outreach",
           note: "Auto-generated from brand discover shortlist",
         }),
       })
@@ -330,6 +373,23 @@ export default function DiscoverPage() {
             </div>
             <Button variant="outline" className="h-11 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
               <Filter className="mr-2 h-4 w-4" /> Quick filter
+            </Button>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+            <select
+              value={selectedCampaignId}
+              onChange={(event) => setSelectedCampaignId(event.target.value)}
+              className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <option value="">Select campaign</option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </option>
+              ))}
+            </select>
+            <Button asChild variant="outline" className="h-11 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+              <Link href="/brand/campaigns/new">Create campaign</Link>
             </Button>
           </div>
 

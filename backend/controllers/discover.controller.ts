@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import UserModel from "../models/Users";
 import DiscoverShortlistModel from "../models/DiscoverShortlist";
 import DiscoverInviteModel from "../models/DiscoverInvite";
+import CampaignModel from "../models/Campaign";
 
 const parseNumber = (value: unknown): number | undefined => {
   if (value === undefined || value === null || value === "") return undefined;
@@ -250,9 +251,23 @@ export const createDiscoverInvites = async (
       return res.status(403).json({ message: "Only brand accounts can send invites" });
     }
 
-    const { influencerIds, campaignLabel = "", note = "" } = req.body;
+    const { influencerIds, campaignId, campaignLabel = "", note = "" } = req.body;
     if (!Array.isArray(influencerIds) || influencerIds.length === 0) {
       return res.status(400).json({ message: "influencerIds array is required" });
+    }
+    if (!campaignId) {
+      return res.status(400).json({ message: "campaignId is required" });
+    }
+
+    const campaign = await CampaignModel.findOne({
+      _id: String(campaignId),
+      brandId: requester.id,
+    })
+      .select("_id name")
+      .lean();
+
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found" });
     }
 
     const uniqueIds = Array.from(new Set(influencerIds.map((value: any) => String(value))));
@@ -277,6 +292,7 @@ export const createDiscoverInvites = async (
       const existingPending = await DiscoverInviteModel.findOne({
         brandId: requester.id,
         influencerId,
+        campaignId: String(campaign._id),
         status: "pending",
       })
         .select("_id")
@@ -290,7 +306,8 @@ export const createDiscoverInvites = async (
       const invite = await DiscoverInviteModel.create({
         brandId: requester.id,
         influencerId,
-        campaignLabel: String(campaignLabel || ""),
+        campaignId: String(campaign._id),
+        campaignLabel: String(campaignLabel || campaign.name || ""),
         note: String(note || ""),
         status: "pending",
       });
@@ -361,6 +378,7 @@ export const getDiscoverInvites = async (
             brandName:
               brand?.brandDetails?.companyName || brand?.name || brand?.username || "Brand",
             brandHandle: brand?.username ? `@${brand.username}` : "",
+            campaignId: String(item.campaignId || ""),
             campaignLabel: item.campaignLabel || "",
             note: item.note || "",
             status: item.status,
@@ -411,6 +429,7 @@ export const getDiscoverInvites = async (
             influencerName: influencer?.name || influencer?.username || "Influencer",
             influencerHandle: influencer?.username ? `@${influencer.username}` : "",
             influencerNiche: influencer?.influencerDetails?.niche || "",
+            campaignId: String(item.campaignId || ""),
             campaignLabel: item.campaignLabel || "",
             note: item.note || "",
             status: item.status,

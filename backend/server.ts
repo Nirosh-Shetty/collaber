@@ -35,6 +35,9 @@ app.use(passport.session());
 // Trust proxy for secure cookies in production (if behind a reverse proxy)
 app.set("trust proxy", true);
 
+// Initialize Socket.io BEFORE adding routes (creates HTTP server and attaches Express to it)
+const { httpServer } = initializeSocket(app);
+
 app.use("/api", router);
 app.use("/api/messaging", messagingRouter);
 
@@ -57,9 +60,6 @@ const connectDB = async () => {
 };
 
 connectDB(); // Call the function to establish the connection
-
-// Initialize Socket.io (creates HTTP server and attaches Express to it)
-const {httpServer} = initializeSocket(app);
 
 // Start single server with both Express and Socket.io
 httpServer.listen(PORT, () => {

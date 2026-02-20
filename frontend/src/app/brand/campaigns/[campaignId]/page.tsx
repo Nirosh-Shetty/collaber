@@ -1,0 +1,464 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { ArrowLeft, CheckCircle2, DollarSign, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+
+type CampaignStatus = "draft" | "active" | "paused" | "completed" | "archived"
+type CampaignPriority = "low" | "medium" | "high"
+type CampaignGoal = "awareness" | "sales" | "launch" | "other"
+type PromotionStatus =
+  | "requested"
+  | "negotiating"
+  | "accepted"
+  | "content_in_progress"
+  | "posted"
+  | "metrics_submitted"
+  | "payment_pending"
+  | "completed"
+
+type Campaign = {
+  id: string
+  name: string
+  objective: string
+  niche: string
+  status: CampaignStatus
+  priority: CampaignPriority
+  budgetTotal: number
+  budgetSpent: number
+  roi: number
+  startDate: string
+  endDate: string
+  invitedCreators: number
+  acceptedCreators: number
+  deliverablesDone: number
+  deliverablesTotal: number
+}
+
+type Promotion = {
+  id: string
+  campaignId: string
+  campaignTitle: string
+  influencerId: string
+  status: PromotionStatus
+  paymentStatus: "pending" | "paid"
+  paymentAmount: number
+  paymentDueAt: string
+  performance: {
+    reach: number
+    views: number
+    engagement: number
+  }
+}
+
+type CampaignResponse = { campaign?: Campaign }
+type PromotionListResponse = { items?: Promotion[] }
+
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+
+const statusPillClass: Record<CampaignStatus, string> = {
+  draft: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+  active: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
+  paused: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  archived: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+}
+
+const promotionPillClass: Record<PromotionStatus, string> = {
+  requested: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+  negotiating: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+  accepted: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
+  content_in_progress: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  posted: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+  metrics_submitted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  payment_pending: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+  completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+}
+
+export default function CampaignDetailPage() {
+  const params = useParams<{ campaignId: string }>()
+  const campaignId = params?.campaignId
+
+  const [campaign, setCampaign] = useState<Campaign | null>(null)
+  const [promotions, setPromotions] = useState<Promotion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null)
+  const [payBusyId, setPayBusyId] = useState<string | null>(null)
+  const [statusDrafts, setStatusDrafts] = useState<Record<string, PromotionStatus>>({})
+  const [createBusy, setCreateBusy] = useState(false)
+  const [influencerId, setInfluencerId] = useState("")
+  const [product, setProduct] = useState("")
+  const [campaignGoal, setCampaignGoal] = useState<CampaignGoal>("awareness")
+  const [deliverablePlatform, setDeliverablePlatform] = useState("instagram")
+  const [deliverableFormat, setDeliverableFormat] = useState("reel")
+  const [deliverableQuantity, setDeliverableQuantity] = useState("1")
+  const [draftDueAt, setDraftDueAt] = useState("")
+  const [postAt, setPostAt] = useState("")
+  const [paymentAmount, setPaymentAmount] = useState("")
+  const [paymentDueAt, setPaymentDueAt] = useState("")
+
+  const loadData = useCallback(async (signal?: AbortSignal) => {
+    if (!campaignId) return
+
+    setLoading(true)
+    setError(null)
+    try {
+      const [campaignRes, promotionsRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/campaigns/${campaignId}`, {
+          credentials: "include",
+          signal,
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/promotions?campaignId=${campaignId}&status=all&limit=50`, {
+          credentials: "include",
+          signal,
+        }),
+      ])
+
+      if (!campaignRes.ok) throw new Error("Failed to load campaign")
+
+      const campaignData: CampaignResponse = await campaignRes.json()
+      setCampaign(campaignData?.campaign || null)
+
+      if (promotionsRes.ok) {
+        const promotionsData: PromotionListResponse = await promotionsRes.json()
+        const items = Array.isArray(promotionsData?.items) ? promotionsData.items : []
+        setPromotions(items)
+        setStatusDrafts(
+          Object.fromEntries(items.map((item) => [item.id, item.status]))
+        )
+      } else {
+        setPromotions([])
+      }
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return
+      setError("Unable to load campaign details right now.")
+    } finally {
+      setLoading(false)
+    }
+  }, [campaignId])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    loadData(controller.signal)
+    return () => controller.abort()
+  }, [loadData])
+
+  const canAdvanceStatus = useMemo(
+    () =>
+      new Set<PromotionStatus>([
+        "negotiating",
+        "requested",
+        "content_in_progress",
+        "payment_pending",
+        "completed",
+      ]),
+    []
+  )
+
+  const updatePromotionStatus = async (promotionId: string) => {
+    const nextStatus = statusDrafts[promotionId]
+    if (!nextStatus) return
+    setStatusBusyId(promotionId)
+    setActionMessage(null)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/promotions/${promotionId}/status`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data?.message || "Failed to update status")
+
+      setActionMessage("Promotion status updated.")
+      await loadData()
+    } catch (err: unknown) {
+      setActionMessage(err instanceof Error ? err.message : "Status update failed.")
+    } finally {
+      setStatusBusyId(null)
+    }
+  }
+
+  const markPaid = async (promotionId: string) => {
+    setPayBusyId(promotionId)
+    setActionMessage(null)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/promotions/${promotionId}/payment`, {
+        method: "PATCH",
+        credentials: "include",
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data?.message || "Failed to mark paid")
+
+      setActionMessage("Payment marked as paid.")
+      await loadData()
+    } catch (err: unknown) {
+      setActionMessage(err instanceof Error ? err.message : "Payment update failed.")
+    } finally {
+      setPayBusyId(null)
+    }
+  }
+
+  const createPromotion = async () => {
+    if (!campaignId || !campaign) return
+
+    setCreateBusy(true)
+    setActionMessage(null)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/promotions`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaignId,
+          influencerId: influencerId.trim(),
+          campaignTitle: campaign.name,
+          product: product.trim(),
+          campaignGoal,
+          deliverables: [
+            {
+              platform: deliverablePlatform.trim(),
+              format: deliverableFormat.trim(),
+              quantity: Number(deliverableQuantity),
+            },
+          ],
+          draftDueAt,
+          postAt,
+          paymentAmount: Number(paymentAmount),
+          paymentDueAt,
+          requiresDraftApproval: true,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data?.message || "Failed to create promotion")
+
+      setActionMessage("Promotion created successfully.")
+      setInfluencerId("")
+      setProduct("")
+      setDeliverablePlatform("instagram")
+      setDeliverableFormat("reel")
+      setDeliverableQuantity("1")
+      setDraftDueAt("")
+      setPostAt("")
+      setPaymentAmount("")
+      setPaymentDueAt("")
+
+      await loadData()
+    } catch (err: unknown) {
+      setActionMessage(err instanceof Error ? err.message : "Could not create promotion.")
+    } finally {
+      setCreateBusy(false)
+    }
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <Button asChild variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+        <Link href="/brand/campaigns">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to campaigns
+        </Link>
+      </Button>
+
+      {loading ? (
+        <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+          <CardContent className="p-5 text-sm text-slate-600 dark:text-slate-300">Loading campaign details...</CardContent>
+        </Card>
+      ) : null}
+
+      {error ? (
+        <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+          <CardContent className="p-5 text-sm text-rose-600 dark:text-rose-300">{error}</CardContent>
+        </Card>
+      ) : null}
+
+      {actionMessage ? (
+        <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+          <CardContent className="p-4 text-sm text-emerald-700 dark:text-emerald-300">{actionMessage}</CardContent>
+        </Card>
+      ) : null}
+
+      {!loading && campaign ? (
+        <>
+          <Card className="border-white/60 bg-white/85 shadow-xl shadow-cyan-100/40 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/85">
+            <CardHeader>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-2xl text-slate-900 dark:text-slate-100">{campaign.name}</CardTitle>
+                  <CardDescription className="mt-1 text-slate-600 dark:text-slate-400">{campaign.objective}</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Badge className={`border-0 capitalize ${statusPillClass[campaign.status]}`}>{campaign.status}</Badge>
+                  <Badge className="border-0 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 capitalize">{campaign.priority}</Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-3 text-sm md:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Budget</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  {formatMoney(campaign.budgetSpent)} / {formatMoney(campaign.budgetTotal)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Timeline</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  {formatDate(campaign.startDate)} - {formatDate(campaign.endDate)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Invited/Accepted</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  {campaign.invitedCreators} / {campaign.acceptedCreators}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs text-slate-500 dark:text-slate-400">ROI</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{campaign.roi > 0 ? `${campaign.roi.toFixed(1)}x` : "Not started"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-slate-100">Promotions</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">
+                Manage workflow status and payment completion for this campaign.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Create Promotion</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Create a creator deal linked to this campaign.
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <Input
+                    placeholder="Influencer User ID"
+                    value={influencerId}
+                    onChange={(event) => setInfluencerId(event.target.value)}
+                  />
+                  <Input placeholder="Product/Service" value={product} onChange={(event) => setProduct(event.target.value)} />
+                  <select
+                    value={campaignGoal}
+                    onChange={(event) => setCampaignGoal(event.target.value as CampaignGoal)}
+                    className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  >
+                    <option value="awareness">Awareness</option>
+                    <option value="sales">Sales</option>
+                    <option value="launch">Launch</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input value={deliverablePlatform} onChange={(event) => setDeliverablePlatform(event.target.value)} placeholder="Platform" />
+                    <Input value={deliverableFormat} onChange={(event) => setDeliverableFormat(event.target.value)} placeholder="Format" />
+                    <Input type="number" min={1} value={deliverableQuantity} onChange={(event) => setDeliverableQuantity(event.target.value)} placeholder="Qty" />
+                  </div>
+                  <Input type="date" value={draftDueAt} onChange={(event) => setDraftDueAt(event.target.value)} />
+                  <Input type="date" value={postAt} onChange={(event) => setPostAt(event.target.value)} />
+                  <Input type="number" min={0} value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder="Payment amount" />
+                  <Input type="date" value={paymentDueAt} onChange={(event) => setPaymentDueAt(event.target.value)} />
+                </div>
+                <Button
+                  className="mt-3 bg-slate-900 text-white hover:bg-slate-800 dark:bg-cyan-600 dark:hover:bg-cyan-700"
+                  onClick={createPromotion}
+                  disabled={createBusy}
+                >
+                  {createBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create Promotion
+                </Button>
+              </div>
+
+              {promotions.map((promotion) => (
+                <div
+                  key={promotion.id}
+                  className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{promotion.campaignTitle || "Promotion"}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <Badge className={`border-0 text-[10px] capitalize ${promotionPillClass[promotion.status]}`}>
+                          {promotion.status.replaceAll("_", " ")}
+                        </Badge>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Payment {promotion.paymentStatus}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{formatMoney(promotion.paymentAmount)} due {formatDate(promotion.paymentDueAt)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        value={statusDrafts[promotion.id] || promotion.status}
+                        onChange={(event) =>
+                          setStatusDrafts((prev) => ({
+                            ...prev,
+                            [promotion.id]: event.target.value as PromotionStatus,
+                          }))
+                        }
+                        list={`promotion-status-${promotion.id}`}
+                        className="h-8 w-[180px] text-xs"
+                      />
+                      <datalist id={`promotion-status-${promotion.id}`}>
+                        {Array.from(canAdvanceStatus).map((status) => (
+                          <option key={status} value={status} />
+                        ))}
+                      </datalist>
+                      <Button
+                        size="sm"
+                        onClick={() => updatePromotionStatus(promotion.id)}
+                        disabled={statusBusyId === promotion.id}
+                        className="h-8 bg-slate-900 text-white hover:bg-slate-800 dark:bg-cyan-600 dark:hover:bg-cyan-700"
+                      >
+                        {statusBusyId === promotion.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Update status"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => markPaid(promotion.id)}
+                        disabled={payBusyId === promotion.id || promotion.paymentStatus === "paid"}
+                        className="h-8 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        {payBusyId === promotion.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <>
+                            <DollarSign className="mr-1 h-3.5 w-3.5" />
+                            {promotion.paymentStatus === "paid" ? "Paid" : "Mark paid"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {(promotion.performance.reach || promotion.performance.views || promotion.performance.engagement) ? (
+                    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
+                      <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 text-emerald-600" />
+                      Metrics: Reach {promotion.performance.reach}, Views {promotion.performance.views}, Engagement {promotion.performance.engagement}%
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+
+              {promotions.length === 0 ? (
+                <p className="text-sm text-slate-600 dark:text-slate-300">No promotions in this campaign yet.</p>
+              ) : null}
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+    </div>
+  )
+}
