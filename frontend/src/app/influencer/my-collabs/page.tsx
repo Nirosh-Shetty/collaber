@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,105 +17,161 @@ import {
   Upload,
 } from "lucide-react"
 
-const collaborations = [
+type PromotionStatus =
+  | "requested"
+  | "negotiating"
+  | "accepted"
+  | "content_in_progress"
+  | "posted"
+  | "metrics_submitted"
+  | "payment_pending"
+  | "completed"
+
+type Promotion = {
+  id: string
+  campaignTitle: string
+  status: PromotionStatus
+  paymentStatus: "pending" | "paid"
+  paymentAmount: number
+  paymentDueAt: string
+  performance: {
+    reach: number
+    views: number
+    engagement: number
+  }
+  createdAt: string
+  brandName?: string
+}
+
+type PromotionResponse = {
+  items?: Promotion[]
+}
+
+const seedPromotions: Promotion[] = [
   {
-    id: 1,
-    title: "Summer Tech Collection",
-    brand: "TechCorp",
-    amount: "$2,500",
-    status: "active",
-    deadline: "Feb 20, 2026",
-    deliverables: { completed: 2, total: 3 },
-    description: "Short-form launch content highlighting flagship devices across IG and TikTok.",
-    priority: "high",
-    category: "Technology",
+    id: "seed_p_1",
+    campaignTitle: "Spring Launch Burst",
+    status: "content_in_progress",
+    paymentStatus: "pending",
+    paymentAmount: 1200,
+    paymentDueAt: "2026-03-01",
+    performance: { reach: 0, views: 0, engagement: 0 },
+    createdAt: "2026-02-01T00:00:00.000Z",
+    brandName: "TechCorp",
   },
   {
-    id: 2,
-    title: "Fitness Challenge Campaign",
-    brand: "HealthBrand",
-    amount: "$1,800",
-    status: "review",
-    deadline: "Feb 25, 2026",
-    deliverables: { completed: 1, total: 2 },
-    description: "30-day challenge recap with before-after transformations and CTA reels.",
-    priority: "medium",
-    category: "Health & Fitness",
-  },
-  {
-    id: 3,
-    title: "Food Photography Series",
-    brand: "FoodieApp",
-    amount: "$3,200",
-    status: "completed",
-    deadline: "Feb 14, 2026",
-    deliverables: { completed: 3, total: 3 },
-    description: "Premium editorial food visuals for seasonal restaurant partner spotlight.",
-    priority: "low",
-    category: "Food & Beverage",
-  },
-  {
-    id: 4,
-    title: "Gaming Setup Showcase",
-    brand: "GameTech",
-    amount: "$4,100",
-    status: "pending",
-    deadline: "Mar 1, 2026",
-    deliverables: { completed: 0, total: 4 },
-    description: "Desk transformation series with product reveals and creator POV storytelling.",
-    priority: "high",
-    category: "Gaming",
-  },
-  {
-    id: 5,
-    title: "Sustainable Fashion Week",
-    brand: "EcoWear",
-    amount: "$2,800",
-    status: "active",
-    deadline: "Feb 28, 2026",
-    deliverables: { completed: 1, total: 5 },
-    description: "Behind-the-scenes daily looks focused on conscious fabric and styling choices.",
-    priority: "medium",
-    category: "Fashion",
+    id: "seed_p_2",
+    campaignTitle: "Creator Testimonial Series",
+    status: "metrics_submitted",
+    paymentStatus: "pending",
+    paymentAmount: 1100,
+    paymentDueAt: "2026-02-26",
+    performance: { reach: 74000, views: 61500, engagement: 8.1 },
+    createdAt: "2026-02-05T00:00:00.000Z",
+    brandName: "HealthBrand",
   },
 ]
 
-type TabValue = "all" | "active" | "review" | "completed" | "pending"
+const tabs: { value: "all" | "active" | "review" | "completed" | "pending"; label: string; matcher: (status: PromotionStatus) => boolean }[] = [
+  { value: "all", label: "All", matcher: () => true },
+  {
+    value: "active",
+    label: "Active",
+    matcher: (status) => ["accepted", "content_in_progress", "posted", "metrics_submitted"].includes(status),
+  },
+  {
+    value: "review",
+    label: "In Review",
+    matcher: (status) => ["requested", "negotiating"].includes(status),
+  },
+  {
+    value: "completed",
+    label: "Completed",
+    matcher: (status) => status === "completed",
+  },
+  {
+    value: "pending",
+    label: "Pending",
+    matcher: (status) => status === "payment_pending",
+  },
+]
 
-const statusStyles: Record<string, string> = {
-  active: "border-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
-  review: "border-0 bg-amber-100 text-amber-700 hover:bg-amber-100",
-  completed: "border-0 bg-cyan-100 text-cyan-700 hover:bg-cyan-100",
-  pending: "border-0 bg-slate-200 text-slate-700 hover:bg-slate-200",
+const statusStyles: Record<PromotionStatus, string> = {
+  requested: "border-0 bg-slate-100 text-slate-700",
+  negotiating: "border-0 bg-violet-100 text-violet-700",
+  accepted: "border-0 bg-cyan-100 text-cyan-700",
+  content_in_progress: "border-0 bg-amber-100 text-amber-700",
+  posted: "border-0 bg-sky-100 text-sky-700",
+  metrics_submitted: "border-0 bg-emerald-100 text-emerald-700",
+  payment_pending: "border-0 bg-orange-100 text-orange-700",
+  completed: "border-0 bg-emerald-100 text-emerald-700",
 }
 
-const priorityStyles: Record<string, string> = {
-  high: "text-rose-600",
-  medium: "text-amber-600",
-  low: "text-emerald-600",
-}
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)
 
 export default function MyCollaborations() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [activeTab, setActiveTab] = useState<TabValue>("all")
+  const [search, setSearch] = useState("")
+  const [activeTab, setActiveTab] = useState<typeof tabs[number]["value"]>("all")
+  const [promotions, setPromotions] = useState<Promotion[]>(seedPromotions)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredCollabs = useMemo(() => {
-    return collaborations.filter((collab) => {
-      const matchesSearch =
-        collab.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        collab.brand.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesTab = activeTab === "all" || collab.status === activeTab
-      return matchesSearch && matchesTab
+  useEffect(() => {
+    const controller = new AbortController()
+    const load = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/promotions?status=all&limit=50`, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error("Failed to fetch collaborations")
+        const data: PromotionResponse = await response.json()
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setPromotions(data.items)
+        } else {
+          setPromotions([])
+        }
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") return
+        setPromotions(seedPromotions)
+        setError("Showing preview data while we reconnect.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+    return () => controller.abort()
+  }, [])
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return promotions.filter((promotion) => {
+      const matchesText =
+        !query ||
+        promotion.campaignTitle.toLowerCase().includes(query) ||
+        (promotion.brandName || "").toLowerCase().includes(query)
+      const tabRow = tabs.find((tab) => tab.value === activeTab)
+      const matchesTab = tabRow ? tabRow.matcher(promotion.status) : true
+      return matchesText && matchesTab
     })
-  }, [searchTerm, activeTab])
+  }, [promotions, search, activeTab])
 
-  const getTabCount = (status: TabValue) => {
-    if (status === "all") return collaborations.length
-    return collaborations.filter((item) => item.status === status).length
-  }
+  const counts = useMemo(() => {
+    const base: Record<typeof tabs[number]["value"], number> = {
+      all: promotions.length,
+      active: promotions.filter((p) => tabs[1].matcher(p.status)).length,
+      review: promotions.filter((p) => tabs[2].matcher(p.status)).length,
+      completed: promotions.filter((p) => tabs[3].matcher(p.status)).length,
+      pending: promotions.filter((p) => tabs[4].matcher(p.status)).length,
+    }
+    return base
+  }, [promotions])
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:space-y-8 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <Card className="border-white/60 bg-white/85 shadow-lg shadow-cyan-100/40 backdrop-blur-sm">
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
@@ -123,151 +179,133 @@ export default function MyCollaborations() {
               <Sparkles className="mr-1 h-3.5 w-3.5" /> Partnership Hub
             </Badge>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">My Collaborations</h1>
-            <p className="mt-1 text-sm text-slate-600">Track campaign progress, priorities, and delivery status in one view.</p>
+            <p className="mt-1 text-sm text-slate-600">Live collaboration statuses tied to your campaigns.</p>
           </div>
           <Button className="w-full bg-slate-900 text-white hover:bg-slate-800 sm:w-auto">
             <MessageSquare className="mr-2 h-4 w-4" /> New proposal
           </Button>
         </CardContent>
       </Card>
+      {error && (
+        <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+          <CardContent className="p-4 text-sm text-rose-600 dark:text-rose-300">{error}</CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: "Active", value: getTabCount("active") },
-          { label: "In Review", value: getTabCount("review") },
-          { label: "Completed", value: getTabCount("completed") },
-          { label: "Pending", value: getTabCount("pending") },
-        ].map((item) => (
-          <Card key={item.label} className="border-slate-200 bg-white/90 shadow-sm">
+        {tabs.slice(0, 4).map((tab) => (
+          <Card key={tab.value} className="border-slate-200 bg-white/90 shadow-sm">
             <CardContent className="p-4">
-              <p className="text-sm text-slate-500">{item.label}</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{item.value}</p>
+              <p className="text-sm text-slate-500">{tab.label}</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{counts[tab.value]}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Card className="border-slate-200 bg-white/90 shadow-sm">
-        <CardContent className="p-4 sm:p-5">
+        <CardContent className="space-y-3 p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by campaign or brand"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
                 className="h-10 border-slate-300 bg-white pl-10 text-slate-900 placeholder:text-slate-400"
               />
             </div>
-            <Button variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+            <Button variant="outline" className="h-10 border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
               <Filter className="mr-2 h-4 w-4" /> Filters
             </Button>
           </div>
 
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="mt-4 w-full">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof tabs[number]["value"])} className="mt-4 w-full">
             <TabsList className="grid h-auto w-full grid-cols-5 rounded-xl border border-slate-200 bg-white p-1">
-              <TabsTrigger value="all" className="rounded-lg text-xs sm:text-sm data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">
-                All ({getTabCount("all")})
-              </TabsTrigger>
-              <TabsTrigger value="active" className="rounded-lg text-xs sm:text-sm data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">
-                Active ({getTabCount("active")})
-              </TabsTrigger>
-              <TabsTrigger value="review" className="rounded-lg text-xs sm:text-sm data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">
-                Review ({getTabCount("review")})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="rounded-lg text-xs sm:text-sm data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">
-                Done ({getTabCount("completed")})
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-lg text-xs sm:text-sm data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">
-                Pending ({getTabCount("pending")})
-              </TabsTrigger>
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="rounded-lg text-xs sm:text-sm data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900"
+                >
+                  {tab.label} ({counts[tab.value]})
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </CardContent>
       </Card>
 
       <div className="space-y-4">
-        {filteredCollabs.map((collab) => {
-          const progress = Math.round((collab.deliverables.completed / collab.deliverables.total) * 100)
-          return (
-            <Card key={collab.id} className="border-slate-200 bg-white/90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-              <CardHeader className="pb-2">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <CardTitle className="text-lg text-slate-900">{collab.title}</CardTitle>
-                      <Badge className={statusStyles[collab.status]}>{collab.status}</Badge>
-                    </div>
-                    <CardDescription className="mt-1 text-slate-600">
-                      {collab.brand} · {collab.category}
-                    </CardDescription>
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">{collab.amount}</p>
-                </div>
-              </CardHeader>
+        {loading ? (
+          <Card className="border-dashed border-slate-300 bg-white/90 shadow-sm">
+            <CardContent className="p-6 text-sm text-slate-600">Loading collaborations...</CardContent>
+          </Card>
+        ) : null}
 
-              <CardContent className="space-y-4">
-                <p className="text-sm text-slate-600">{collab.description}</p>
+        {filtered.length === 0 && !loading ? (
+          <Card className="border-slate-200 bg-white/90 shadow-sm">
+            <CardContent className="flex flex-col items-center px-4 py-12 text-center">
+              <div className="rounded-full bg-slate-100 p-3">
+                <MessageSquare className="h-6 w-6 text-slate-500" />
+              </div>
+              <h3 className="mt-3 text-lg font-semibold text-slate-900">No collaborations found</h3>
+              <p className="mt-1 text-sm text-slate-600">Adjust filters or wait for a new campaign assignment.</p>
+            </CardContent>
+          </Card>
+        ) : null}
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>Deliverables Progress</span>
-                    <span>
-                      {collab.deliverables.completed}/{collab.deliverables.total}
-                    </span>
+        {filtered.map((promotion) => (
+          <Card
+            key={promotion.id}
+            className="border-slate-200 bg-white/90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <CardHeader className="pb-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="text-lg text-slate-900">{promotion.campaignTitle || "Collaboration"}</CardTitle>
+                    <Badge className={statusStyles[promotion.status]}>{promotion.status.replaceAll("_", " ")}</Badge>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100">
-                    <div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500" style={{ width: `${progress}%` }} />
-                  </div>
+                  {promotion.brandName ? (
+                    <CardDescription className="mt-1 text-slate-600">{promotion.brandName}</CardDescription>
+                  ) : null}
                 </div>
+                <p className="text-lg font-semibold text-slate-900">{formatMoney(promotion.paymentAmount)}</p>
+              </div>
+            </CardHeader>
 
-                <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-3">
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <Calendar className="h-4 w-4 text-cyan-700" />
-                    <span>Deadline: {collab.deadline}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <Clock3 className="h-4 w-4 text-amber-700" />
-                    <span className={priorityStyles[collab.priority]}>Priority: {collab.priority}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-                    <span>{progress}% completed</span>
-                  </div>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-3">
+                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <Calendar className="h-4 w-4 text-cyan-700" />
+                  <span>Due {new Date(promotion.paymentDueAt).toLocaleDateString()}</span>
                 </div>
+                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <Clock3 className="h-4 w-4 text-amber-700" />
+                  <span>Payment {promotion.paymentStatus}</span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+                  <span>Reach {promotion.performance.reach || 0}</span>
+                </div>
+              </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
-                    View Details
-                  </Button>
-                  <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
-                    <MessageSquare className="mr-2 h-4 w-4" /> Message brand
-                  </Button>
-                  {collab.status === "active" && (
-                    <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
-                      <Upload className="mr-2 h-4 w-4" /> Upload content
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
+                  View details
+                </Button>
+                <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+                  <MessageSquare className="mr-2 h-4 w-4" /> Message brand
+                </Button>
+                <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+                  <Upload className="mr-2 h-4 w-4" /> Upload asset
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-
-      {filteredCollabs.length === 0 && (
-        <Card className="border-slate-200 bg-white/90 shadow-sm">
-          <CardContent className="flex flex-col items-center px-4 py-12 text-center">
-            <div className="rounded-full bg-slate-100 p-3">
-              <MessageSquare className="h-6 w-6 text-slate-500" />
-            </div>
-            <h3 className="mt-3 text-lg font-semibold text-slate-900">No collaborations found</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              {searchTerm ? "Try a different term or filter." : "You do not have collaborations in this status yet."}
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
