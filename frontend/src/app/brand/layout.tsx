@@ -21,23 +21,23 @@ import {
   Bell,
   Building,
   ChevronRight,
-  FileText,
   Home,
   MessageSquare,
   Search,
   Settings,
   Target,
   Users,
+  DollarSign,
   MenuIcon,
 } from "lucide-react"
 
 const sidebarItems = [
   { name: "Dashboard", href: "/brand/dashboard", icon: Home },
   { name: "Campaigns", href: "/brand/campaigns", icon: Target },
-  { name: "Influencers", href: "/brand/influencers", icon: Users },
+  { name: "Collaborations", href: "/brand/influencers", icon: Users },
   { name: "Analytics", href: "/brand/analytics", icon: BarChart3 },
   { name: "Messages", href: "/brand/messages", icon: MessageSquare },
-  { name: "Contracts", href: "/brand/contracts", icon: FileText },
+  { name: "Payments", href: "/brand/payments", icon: DollarSign },
   { name: "Discover", href: "/brand/discover", icon: Search },
 ]
 
@@ -52,10 +52,10 @@ const routeTitle: Record<string, string> = {
   "/brand/dashboard": "Dashboard",
   "/brand/campaigns": "Campaigns",
   "/brand/campaigns/new": "New Campaign",
-  "/brand/influencers": "Influencers",
+  "/brand/influencers": "Collaborations",
   "/brand/analytics": "Analytics",
   "/brand/messages": "Messages",
-  "/brand/contracts": "Contracts",
+  "/brand/payments": "Payments",
   "/brand/discover": "Discover",
   "/brand/settings": "Settings",
 }
