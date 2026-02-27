@@ -216,8 +216,12 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>Brand Profile</DropdownMenuItem>
-                    <DropdownMenuItem>Account Settings</DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/brand/profile">Brand Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/brand/settings">Account Settings</Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
                   </DropdownMenuContent>
