@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import axios from "axios"
+import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
   DropdownMenu,
@@ -29,7 +30,6 @@ import {
   SettingsIcon,
   Sparkles,
 } from "lucide-react"
-import Link from "next/link"
 
 const sidebarItems = [
   { title: "Dashboard", icon: HomeIcon, url: "/influencer/dashboard" },
@@ -211,13 +211,18 @@ export default function InfluencerLayout({
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                    <DropdownMenuItem>Billing</DropdownMenuItem>
-                    <DropdownMenuItem>Support</DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/influencer/profile">Your profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/influencer/settings">Account settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>Billing</DropdownMenuItem>
+                  <DropdownMenuItem>Support</DropdownMenuItem>
+                  <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
