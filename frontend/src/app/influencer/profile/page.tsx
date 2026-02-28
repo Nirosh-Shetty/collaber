@@ -1,4 +1,4 @@
-"use client"
+ "use client"
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
@@ -135,8 +135,8 @@ export default function InfluencerProfilePage() {
                 <p className="mt-2 text-sm text-white/80 max-w-2xl leading-relaxed">{heroSummary}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" className="border border-white/40 text-white hover:bg-white/10">
-                  Edit profile
+                <Button variant="ghost" className="border border-white/40 text-white hover:bg-white/10" asChild>
+                  <Link href="/influencer/profile/edit">Edit profile</Link>
                 </Button>
                 <Button variant="outline" className="border-white/50 text-white">
                   Share profile
@@ -162,7 +162,7 @@ export default function InfluencerProfilePage() {
                   <CardDescription>Qualitative notes that help brands understand what you bring.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-700">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
                     <p className="text-sm font-semibold text-slate-900">Storyline</p>
                     <p className="mt-1 text-xs text-slate-500">
                       {profile.influencerDetails?.highlight ??

@@ -105,12 +105,15 @@ export default function BrandProfilePage() {
                   Brand-ready collaboration flows, transparent milestones, and trust metrics built for modern campaigns.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button asChild variant="ghost" className="border border-slate-900/30 bg-white/80 text-slate-900 hover:bg-white">
                   <Link href="/brand/campaigns">Create campaign</Link>
                 </Button>
                 <Button variant="outline" className="border-white/70 text-slate-900">
                   Invite creator
+                </Button>
+                <Button asChild variant="secondary" className="text-slate-900/90">
+                  <Link href="/brand/profile/edit">Edit profile</Link>
                 </Button>
               </div>
             </div>

@@ -247,3 +247,77 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.541 0.281 293.009);
 }
+
+.dark {
+  /* override light-class utilities to keep contrast consistent */
+  .bg-white {
+    background-color: rgba(15, 23, 42, 0.96);
+  }
+  .bg-white\/5 {
+    background-color: rgba(15, 23, 42, 0.05);
+  }
+  .bg-white\/10 {
+    background-color: rgba(15, 23, 42, 0.12);
+  }
+  .bg-white\/50 {
+    background-color: rgba(15, 23, 42, 0.5);
+  }
+  .bg-white\/80 {
+    background-color: rgba(15, 23, 42, 0.82);
+  }
+  .bg-white\/85 {
+    background-color: rgba(14, 20, 31, 0.85);
+  }
+  .bg-white\/90 {
+    background-color: rgba(12, 17, 26, 0.92);
+  }
+  .bg-white\/95 {
+    background-color: rgba(11, 16, 24, 0.95);
+  }
+  .bg-slate-50 {
+    background-color: rgba(15, 23, 42, 0.18);
+  }
+  .bg-slate-100 {
+    background-color: rgba(15, 23, 42, 0.22);
+  }
+  .bg-slate-200 {
+    background-color: rgba(15, 23, 42, 0.34);
+  }
+  .border-slate-200 {
+    border-color: rgba(148, 163, 184, 0.35);
+  }
+  .border-slate-300 {
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+  .text-slate-900 {
+    color: #f8fafc;
+  }
+  .text-slate-800 {
+    color: #f1f5f9;
+  }
+  .text-slate-700 {
+    color: #e2e8f0;
+  }
+  .text-slate-600 {
+    color: #cbd5f5;
+  }
+  .text-slate-500,
+  .text-slate-400 {
+    color: #94a3b8;
+  }
+  .text-slate-300 {
+    color: #cbd5f5;
+  }
+  .text-slate-200 {
+    color: #e2e8f0;
+  }
+  .shadow-sm {
+    box-shadow: 0 8px 24px rgba(2, 6, 23, 0.55);
+  }
+  .shadow-lg {
+    box-shadow: 0 25px 45px rgba(2, 6, 23, 0.65);
+  }
+  .shadow-xl {
+    box-shadow: 0 40px 65px rgba(2, 6, 23, 0.7);
+  }
+}
