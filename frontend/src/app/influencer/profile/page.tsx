@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { Avatar } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -94,6 +94,7 @@ export default function InfluencerProfilePage() {
 
   const heroSummary =
     profile?.influencerDetails?.summary ?? "Handbook-grade creator focused on measurable collaborations."
+  const heroAvatar = profile?.profilePicture || "/images/avatar.png"
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -113,15 +114,14 @@ export default function InfluencerProfilePage() {
           <section className="rounded-[32px] border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-900/70 p-6 shadow-2xl shadow-cyan-500/20 text-white">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <Avatar className="h-20 w-20 border border-white/40 bg-white/10 text-xl font-semibold uppercase text-white">
-                {profile.profilePicture
-                  ? profile.name
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")
-                  : profile.name
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")}
+                <AvatarImage src={heroAvatar} alt={profile.name} />
+                <AvatarFallback className="bg-slate-900/50 text-white">
+                  {profile.name
+                    .split(" ")
+                    .map((part) => part[0])
+                    .join("")
+                    .slice(0, 2)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">

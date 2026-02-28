@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { Avatar } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,6 +37,8 @@ export default function BrandProfilePage() {
   const [profile, setProfile] = useState<BrandProfilePayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const heroAvatar = profile?.profilePicture || "/images/avatar.png"
 
   useEffect(() => {
     const controller = new AbortController()
@@ -85,10 +87,14 @@ export default function BrandProfilePage() {
           <section className="rounded-[32px] border border-slate-200 bg-gradient-to-r from-amber-500 via-orange-500 to-cyan-500 p-6 shadow-2xl shadow-amber-300/40 text-slate-900">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <Avatar className="h-20 w-20 border border-white/60 bg-slate-900/60 text-xl font-semibold uppercase text-white">
-                {profile.name
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")}
+                <AvatarImage src={heroAvatar} alt={profile.name} />
+                <AvatarFallback className="bg-slate-900/10 text-slate-900">
+                  {profile.name
+                    .split(" ")
+                    .map((part) => part[0])
+                    .join("")
+                    .slice(0, 2)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
