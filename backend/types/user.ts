@@ -23,16 +23,23 @@ export interface IUser extends Document {
   googleId?: string;
   facebookId?: string;
   influencerDetails?: {
-    followers: number;
-    niche: string;
-    socialLinks: Map<string, string>;
-    collaborations: Types.ObjectId[];
+    followers?: number;
+    niche?: string;
+    socialLinks?: Map<string, string> | Record<string, string>;
+    collaborations?: Types.ObjectId[];
+    summary?: string;
+    highlight?: string;
+    audience?: string;
+    engagement?: number;
   };
   brandDetails?: {
-    companyName: string;
-    website: string;
-    brandCategory: string;
-    collaborations: Types.ObjectId[];
+    companyName?: string;
+    website?: string;
+    brandCategory?: string;
+    collaborations?: Types.ObjectId[];
+    summary?: string;
+    activeCampaigns?: number;
+    pointsOfContact?: number;
   };
   isVerified: boolean;
   reservationExpiresAt?: Date;

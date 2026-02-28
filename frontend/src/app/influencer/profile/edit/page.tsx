@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { ChangeEvent, useEffect, useMemo, useState } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,11 +45,21 @@ const emptyForm: InfluencerFormState = {
   socialLinks: defaultSocialLinks,
 }
 
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result?.toString() || "")
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+
 export default function InfluencerProfileEditPage() {
   const [form, setForm] = useState<InfluencerFormState>(emptyForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string>("")
+  const [photoData, setPhotoData] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -79,6 +90,9 @@ export default function InfluencerProfileEditPage() {
             ...(data.influencerDetails?.socialLinks || {}),
           },
         }))
+        if (data.profilePicture) {
+          setPhotoPreview(data.profilePicture)
+        }
       } catch (err) {
         console.error(err)
         setStatus("Unable to load your profile. Try refreshing.")
@@ -103,6 +117,14 @@ export default function InfluencerProfileEditPage() {
     }))
   }
 
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const dataUrl = await fileToDataUrl(file)
+    setPhotoPreview(dataUrl)
+    setPhotoData(dataUrl)
+  }
+
   const handleSubmit = async () => {
     if (!readyToSave) return
     setSaving(true)
@@ -122,6 +144,7 @@ export default function InfluencerProfileEditPage() {
           audience: form.audience,
           socialLinks: form.socialLinks,
         },
+        photo: photoData || undefined,
       }
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/influencer`, {
         method: "PATCH",
@@ -144,16 +167,11 @@ export default function InfluencerProfileEditPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
       <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="space-y-3">
             <Badge className="border-0 bg-emerald-100 text-emerald-900">Creator profile</Badge>
             <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">Edit your profile</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">Keep your brand story and audience data current so invites feel professional.</p>
           </div>
-          <Button variant="ghost" asChild>
-            <Link href="/influencer/profile">Preview profile</Link>
-          </Button>
-        </div>
       </section>
 
       <div className="space-y-6">
@@ -181,10 +199,32 @@ export default function InfluencerProfileEditPage() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Phone</p>
                 <Input value={form.phone} onChange={(event) => handleFieldChange("phone", event.target.value)} />
               </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Profile photo</p>
+            <div className="flex flex-wrap items-center gap-4">
+              <Avatar className="h-12 w-12">
+                {photoPreview ? (
+                  <AvatarImage src={photoPreview} alt="Profile preview" />
+                ) : (
+                  <AvatarFallback className="bg-slate-200 text-slate-900">
+                    {form.name
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-600 transition hover:border-slate-500 hover:text-slate-900">
+                Upload a photo
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              </label>
             </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Profile summary</p>
-              <Textarea
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Profile summary</p>
+            <Textarea
                 value={form.summary}
                 onChange={(event) => handleFieldChange("summary", event.target.value)}
                 placeholder="Share what kind of creators you are and how you measure impact."
