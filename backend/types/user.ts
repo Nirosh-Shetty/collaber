@@ -1,4 +1,19 @@
 import { Types, Document } from "mongoose";
+
+export interface SocialConnection {
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: Date;
+  lastSynced?: Date;
+  metadata?: Record<string, unknown>;
+  stats?: {
+    followers?: number;
+    views?: number;
+    engagement?: number;
+    subscribers?: number;
+  };
+}
+
 export interface LoginMetadata {
   ip: string;
   userAgent?: string; // Optional because some requests may not send it
@@ -26,6 +41,7 @@ export interface IUser extends Document {
     followers?: number;
     niche?: string;
     socialLinks?: Map<string, string> | Record<string, string>;
+    socialConnections?: Map<string, SocialConnection>;
     collaborations?: Types.ObjectId[];
     summary?: string;
     highlight?: string;

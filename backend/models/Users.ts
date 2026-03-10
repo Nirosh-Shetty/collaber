@@ -61,6 +61,23 @@ const UserSchema = new Schema<IUser>(
         followers: { type: Number, default: 0 },
         niche: { type: String },
         socialLinks: { type: Map, of: String },
+        socialConnections: {
+          type: Map,
+          of: {
+            accessToken: { type: String },
+            refreshToken: { type: String },
+            expiresAt: { type: Date },
+            lastSynced: { type: Date },
+            metadata: { type: Schema.Types.Mixed },
+            stats: {
+              followers: { type: Number },
+              views: { type: Number },
+              engagement: { type: Number },
+              subscribers: { type: Number },
+            },
+          },
+          default: {},
+        },
         summary: { type: String },
         highlight: { type: String },
         audience: { type: String },

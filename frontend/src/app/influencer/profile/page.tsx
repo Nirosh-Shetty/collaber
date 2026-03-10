@@ -39,6 +39,8 @@ export default function InfluencerProfilePage() {
   const [profile, setProfile] = useState<InfluencerProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [connectError, setConnectError] = useState<string | null>(null)
+  const [connecting, setConnecting] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -95,6 +97,32 @@ export default function InfluencerProfilePage() {
   const heroSummary =
     profile?.influencerDetails?.summary ?? "Handbook-grade creator focused on measurable collaborations."
   const heroAvatar = profile?.profilePicture || "/images/avatar.png"
+  const connections = profile?.influencerDetails?.socialConnections ?? {}
+
+  const connectEndpoints: Record<"youtube" | "instagram", string> = {
+    youtube: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/connect/youtube`,
+    instagram: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/connect/instagram`,
+  }
+
+  const handleConnect = async (platform: keyof typeof connectEndpoints) => {
+    setConnectError(null)
+    setConnecting(platform)
+    try {
+      const response = await fetch(connectEndpoints[platform], {
+        method: "GET",
+        credentials: "include",
+      })
+      const data = await response.json()
+      if (!response.ok || !data.url) {
+        throw new Error(data?.message || "Unable to build consent flow")
+      }
+      window.location.href = data.url
+    } catch (err: unknown) {
+      setConnectError(err instanceof Error ? err.message : "Failed to initiate connection")
+    } finally {
+      setConnecting(null)
+    }
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -151,8 +179,64 @@ export default function InfluencerProfilePage() {
                   <p className="text-xs text-white/60">{stat.meta}</p>
                 </div>
               ))}
-            </div>
-          </section>
+          </div>
+        </section>
+
+          <Card className="border-slate-200 bg-white/90 shadow-sm">
+            <CardHeader>
+              <CardTitle>Social connections</CardTitle>
+              <CardDescription>
+                Only OAuth-approved accounts populate these stats; no manual links are accepted now.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {["youtube", "instagram"].map((platform) => {
+                const connection = connections[platform]
+                const label = platform.charAt(0).toUpperCase() + platform.slice(1)
+                const isConnecting = connecting === platform
+                return (
+                  <div
+                    key={platform}
+                    className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-900/70"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
+                        {connection?.stats ? (
+                          <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                            <p>Subscribers {formatMetric(connection.stats.followers)}</p>
+                            {connection.stats.views && (
+                              <p>Views total {formatMetric(connection.stats.views)}</p>
+                            )}
+                            {connection.stats.engagement && (
+                              <p>Avg engagement {connection.stats.engagement}%</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Not connected</p>
+                        )}
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => handleConnect(platform as "youtube" | "instagram")} disabled={Boolean(connecting)}>
+                        {isConnecting ? "Connecting…" : connection ? "Reconnect" : "Connect"}
+                      </Button>
+                    </div>
+                    {connection?.metadata?.channelTitle && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Channel: {connection.metadata.channelTitle}</p>
+                    )}
+                    {connection?.metadata?.username && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Handle: {connection.metadata.username}</p>
+                    )}
+                    {connection?.lastSynced && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Last synced {new Date(connection.lastSynced).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+              {connectError && <p className="text-sm text-rose-600 dark:text-rose-300">{connectError}</p>}
+            </CardContent>
+          </Card>
 
           <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
             <div className="space-y-6">

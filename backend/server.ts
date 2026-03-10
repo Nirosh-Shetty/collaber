@@ -26,6 +26,7 @@ app.use(
 );
 
 // Session (required by some strategies, even if you disable it later)
+//TODO: store the secret key in env file
 app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
 
 // Passport init
