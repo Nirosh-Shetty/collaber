@@ -141,7 +141,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
               </div>
               {!sidebarCollapsed && (
                 <div>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">Collaber</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">Vooki</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Brand Workspace</p>
                 </div>
               )}
@@ -186,7 +186,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 text-white">
                     <Building className="h-4 w-4" />
                   </div>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">Collaber</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">Vooki</p>
                 </div>
 
                 <div className="hidden sm:block">

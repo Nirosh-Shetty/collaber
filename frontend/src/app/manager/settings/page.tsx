@@ -29,11 +29,11 @@ export default function ManagerSettingsPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="company">Agency / Company</Label>
-            <Input id="company" defaultValue="Collaber Management" className="border-slate-300" />
+            <Input id="company" defaultValue="Vooki Management" className="border-slate-300" />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="email">Work Email</Label>
-            <Input id="email" defaultValue="sarah@collabermgmt.com" className="border-slate-300" />
+            <Input id="email" defaultValue="sarah@Vookimgmt.com" className="border-slate-300" />
           </div>
           <Button className="sm:col-span-2 bg-slate-900 text-white hover:bg-slate-800">Save changes</Button>
         </CardContent>

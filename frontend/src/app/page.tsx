@@ -33,9 +33,9 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      question: "How does Collaber work?",
+      question: "How does Vooki work?",
       answer:
-        "Collaber connects brands, influencers, and managers in one platform. Brands can discover creators, influencers can showcase their reach, and managers can handle multiple profiles. Everything from messaging to contracts happens in one place.",
+        "Vooki connects brands, influencers, and managers in one platform. Brands can discover creators, influencers can showcase their reach, and managers can handle multiple profiles. Everything from messaging to contracts happens in one place.",
     },
     {
       question: "Is it really free to get started?",
@@ -55,7 +55,7 @@ export default function LandingPage() {
     {
       question: "What kind of campaigns can I run?",
       answer:
-        "From one-off sponsored posts to long-term brand ambassador programs, Collaber supports all types of collaborations. You can create custom contracts for any campaign type.",
+        "From one-off sponsored posts to long-term brand ambassador programs, Vooki supports all types of collaborations. You can create custom contracts for any campaign type.",
     },
     {
       question: "How do you ensure quality collaborations?",
@@ -73,7 +73,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">Collaber</span>
+            <span className="text-2xl font-bold text-white">Vooki</span>
           </div>
           <div className="flex items-center space-x-4">
             <Link
@@ -335,7 +335,7 @@ export default function LandingPage() {
                   <Quote className="h-8 w-8 text-purple-400 mr-4 flex-shrink-0" />
                   <div>
                     <p className="text-gray-300 mb-4 italic">
-                      &quot;Collaber transformed how I work with brands. The
+                      &quot;Vooki transformed how I work with brands. The
                       contract system is so professional, and I&apos;ve tripled
                       my collaboration income!&quot;
                     </p>
@@ -522,7 +522,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-white">Collaber</span>
+                <span className="text-xl font-bold text-white">Vooki</span>
               </div>
               <p className="text-gray-400">
                 Making collaborations simple for brands, influencers, and
@@ -596,7 +596,7 @@ export default function LandingPage() {
 
           <div className="border-t border-white/10 mt-12 pt-8 text-center text-gray-400">
             <p>
-              &copy; 2025 Collaber. All rights reserved. Made with lots of ☕
+              &copy; 2025 Vooki. All rights reserved. Made with lots of ☕
               and 💜
             </p>
           </div>

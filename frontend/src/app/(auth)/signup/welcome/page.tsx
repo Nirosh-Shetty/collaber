@@ -83,7 +83,7 @@ export default function WelcomePage() {
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-white mb-2">
-                Join Collaber
+                Join Vooki
               </h1>
               <p className="text-gray-300">
                 Choose how you'll use our platform

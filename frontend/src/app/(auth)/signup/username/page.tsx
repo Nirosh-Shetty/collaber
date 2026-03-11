@@ -248,7 +248,7 @@ export default function UsernamePage() {
                   </div>
                 )}
 
-                <p className="text-xs text-gray-400">This will be your unique identifier on Collaber</p>
+                <p className="text-xs text-gray-400">This will be your unique identifier on Vooki</p>
               </div>
 
               <Button

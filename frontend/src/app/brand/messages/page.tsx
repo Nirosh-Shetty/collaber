@@ -7,7 +7,7 @@ export default function BrandMessagesPage() {
     <MessagesHubProvider
       role="brand"
       heading="Messages"
-      subheading="Coordinate with creators clearly and keep campaign operations inside Collaber."
+      subheading="Coordinate with creators clearly and keep campaign operations inside Vooki."
       composerPlaceholder="Message creator..."
     />
   )

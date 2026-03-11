@@ -133,7 +133,7 @@ export default function OauthRoleRequiredPage() {
         <Card className="bg-white/5 backdrop-blur-sm border-white/10">
           <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px]">
             <h1 className="text-xl font-bold text-white mb-4">Select Your Role</h1>
-            <p className="text-gray-300 text-center mb-6">Choose how you'll use Collaber to finish signing up with Google or Facebook.</p>
+            <p className="text-gray-300 text-center mb-6">Choose how you'll use Vooki to finish signing up with Google or Facebook.</p>
             <div className="w-full space-y-3">
               {roles.map((role) => (
                 <Button
