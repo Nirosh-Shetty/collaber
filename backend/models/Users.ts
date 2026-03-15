@@ -10,6 +10,19 @@ const LoginMetadataSchema = new Schema(
   { _id: false }
 );
 
+const SocialConnectionSchema = new Schema(
+  {
+    platform: { type: String, required: true },
+    accessToken: { type: String },
+    refreshToken: { type: String },
+    expiresAt: { type: Date },
+    lastSynced: { type: Date },
+    profile: { type: Schema.Types.Mixed, default: {} },
+    metrics: { type: Schema.Types.Mixed, default: {} },
+  },
+  { _id: false }
+);
+
 const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
@@ -63,19 +76,7 @@ const UserSchema = new Schema<IUser>(
         socialLinks: { type: Map, of: String },
         socialConnections: {
           type: Map,
-          of: {
-            accessToken: { type: String },
-            refreshToken: { type: String },
-            expiresAt: { type: Date },
-            lastSynced: { type: Date },
-            metadata: { type: Schema.Types.Mixed },
-            stats: {
-              followers: { type: Number },
-              views: { type: Number },
-              engagement: { type: Number },
-              subscribers: { type: Number },
-            },
-          },
+          of: SocialConnectionSchema,
           default: {},
         },
         summary: { type: String },
