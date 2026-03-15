@@ -141,7 +141,7 @@ export default function ResetPassword1ResultPage() {
 
               {status === "success" && (
                 <p className="text-gray-400 text-xs">
-                  For security, you'll need to sign in again with your new password
+                  For security, you&apos;ll need to sign in again with your new password
                 </p>
               )}
 

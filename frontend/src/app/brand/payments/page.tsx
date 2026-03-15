@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useMemo, useState } from "react"
@@ -14,7 +15,6 @@ import {
   CreditCard,
   Download,
   Filter,
-  Plus,
   Search,
   Sparkles,
   TrendingUp,

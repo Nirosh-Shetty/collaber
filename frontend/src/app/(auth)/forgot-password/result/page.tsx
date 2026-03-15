@@ -89,7 +89,7 @@ export default function ForgotPassword1ResultPage() {
                 </h2>
                 <div className="space-y-2">
                   <p className="text-gray-300 text-sm">
-                    We've sent a password reset link to
+                    We&apos;ve sent a password reset link to
                   </p>
                   <div className="flex items-center justify-center gap-2">
                     <span className="font-medium text-white">{email}</span>
@@ -103,7 +103,7 @@ export default function ForgotPassword1ResultPage() {
                   </div>
                 </div>
                 <p className="text-gray-400 text-xs mt-4">
-                  If you don't see the email, check your spam folder
+                  If you don&apos;t see the email, check your spam folder
                 </p>
               </div>
 
@@ -117,7 +117,7 @@ export default function ForgotPassword1ResultPage() {
 
                 <div className="text-center">
                   <p className="text-gray-400 text-sm mb-2">
-                    Didn't receive the email?
+                    Didn&apos;t receive the email?
                   </p>
                   {countdown > 0 ? (
                     <p className="text-gray-400 text-sm">

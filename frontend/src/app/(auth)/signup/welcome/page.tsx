@@ -86,7 +86,7 @@ export default function WelcomePage() {
                 Join Vooki
               </h1>
               <p className="text-gray-300">
-                Choose how you'll use our platform
+                Choose how you&apos;ll use our platform
               </p>
             </div>
 

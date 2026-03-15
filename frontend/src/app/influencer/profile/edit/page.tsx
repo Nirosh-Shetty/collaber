@@ -55,7 +55,7 @@ const fileToDataUrl = (file: File) =>
 
 export default function InfluencerProfileEditPage() {
   const [form, setForm] = useState<InfluencerFormState>(emptyForm)
-  const [loading, setLoading] = useState(true)
+  const [_loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string>("")

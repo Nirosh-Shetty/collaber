@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import type React from "react"
@@ -195,7 +196,7 @@ export default function VerifyPage() {
 
               <div className="text-center">
                 <p className="text-sm text-gray-400">
-                  Didn't receive it?{" "}
+                  Didn&apos;t receive it?{" "}
                   {countdown > 0 ? (
                     <span>Resend in {countdown}s</span>
                   ) : (

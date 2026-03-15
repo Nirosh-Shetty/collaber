@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { MessagesHub, type RoleVariant } from "./messages-hub";
 import { useConversations, useMessaging, useConversationMessages, useSocket } from "@/lib/socket";
 import { messagingAPI } from "@/lib/socket/messaging-api";

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import type React from "react"
@@ -241,7 +242,7 @@ export default function Signin1Page() {
             </div>
 
             <p className="text-center text-sm text-gray-400">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/signup/welcome" className="text-purple-400 hover:text-purple-300">
                 Sign up
               </Link>

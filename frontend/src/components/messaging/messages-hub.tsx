@@ -80,14 +80,14 @@ export function MessagesHub({
   onSelectConversation,
   onSendMessage,
   onCreateConversation,
-  isLoading = false,
+  // isLoading = false,
 }: MessagesHubProps) {
   const [activeTab, setActiveTab] = useState<HubConversation["status"] | "all">("all")
   const [query, setQuery] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(providedSelectedId || conversations[0]?.id || null)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
   const [draft, setDraft] = useState("")
-  const [localMessages, setLocalMessages] = useState(messagesByConversation)
+  // const [localMessages, setLocalMessages] = useState(messagesByConversation)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   const [creatingConversation, setCreatingConversation] = useState(false)
 
