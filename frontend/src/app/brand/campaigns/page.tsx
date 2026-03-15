@@ -24,6 +24,7 @@ import {
 
 type CampaignStatus = "draft" | "active" | "paused" | "completed" | "archived"
 type CampaignPriority = "low" | "medium" | "high"
+type PaymentMethod = "direct" | "escrow"
 
 type Campaign = {
   id: string
@@ -32,6 +33,7 @@ type Campaign = {
   niche: string
   status: CampaignStatus
   priority: CampaignPriority
+  paymentMethod: PaymentMethod
   budgetTotal: number
   budgetSpent: number
   roi: number
@@ -51,6 +53,7 @@ const seedCampaigns: Campaign[] = [
     niche: "Lifestyle",
     status: "active",
     priority: "high",
+    paymentMethod: "direct",
     budgetTotal: 14500,
     budgetSpent: 8200,
     roi: 4.1,
@@ -68,6 +71,7 @@ const seedCampaigns: Campaign[] = [
     niche: "Tech",
     status: "active",
     priority: "medium",
+    paymentMethod: "direct",
     budgetTotal: 9200,
     budgetSpent: 4100,
     roi: 3.6,
@@ -85,6 +89,7 @@ const seedCampaigns: Campaign[] = [
     niche: "Consumer Tech",
     status: "draft",
     priority: "medium",
+    paymentMethod: "direct",
     budgetTotal: 7100,
     budgetSpent: 0,
     roi: 0,
@@ -102,6 +107,7 @@ const seedCampaigns: Campaign[] = [
     niche: "Fashion",
     status: "completed",
     priority: "high",
+    paymentMethod: "direct",
     budgetTotal: 5800,
     budgetSpent: 5760,
     roi: 5.2,
@@ -119,6 +125,7 @@ const seedCampaigns: Campaign[] = [
     niche: "Wellness",
     status: "paused",
     priority: "low",
+    paymentMethod: "direct",
     budgetTotal: 12000,
     budgetSpent: 6900,
     roi: 2.7,
@@ -136,6 +143,7 @@ const seedCampaigns: Campaign[] = [
     niche: "General",
     status: "archived",
     priority: "low",
+    paymentMethod: "direct",
     budgetTotal: 4000,
     budgetSpent: 4000,
     roi: 3.2,
@@ -509,6 +517,9 @@ export default function CampaignsPage() {
                       </Badge>
                       <Badge className={`border-0 capitalize ${priorityPillClass[campaign.priority]}`}>
                         {campaign.priority}
+                      </Badge>
+                      <Badge className={`border-0 ${campaign.paymentMethod === "direct" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" : "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"}`}>
+                        {campaign.paymentMethod === "direct" ? "Direct" : "Escrow"}
                       </Badge>
                     </div>
                   </div>

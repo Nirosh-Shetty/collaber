@@ -1,12 +1,63 @@
- "use client"
+"use client"
 
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowUpRight, Globe } from "lucide-react"
+
+type PlatformKey = "youtube" | "instagram"
+
+type YoutubeConnectionEntry = {
+  platform: "youtube"
+  profile?: {
+    channelId?: string
+    title?: string
+    customUrl?: string
+    avatarUrl?: string
+  }
+  metrics?: {
+    subscribers?: number
+    totalViews?: number
+    videoCount?: number
+    commentCount?: number
+    hiddenSubscriberCount?: boolean
+  }
+  lastSynced?: string
+}
+
+type InstagramConnectionEntry = {
+  platform: "instagram"
+  profile?: {
+    instagramId?: string
+    username?: string
+    profilePicture?: string
+    pageId?: string
+    pageName?: string
+  }
+  metrics?: {
+    followers?: number
+    mediaCount?: number
+    reach?: number
+    impressions?: number
+  }
+  lastSynced?: string
+}
+
+type GenericSocialConnectionEntry = {
+  platform?: string
+  profile?: Record<string, unknown>
+  metrics?: Record<string, unknown>
+  lastSynced?: string
+}
+
+type SocialConnectionEntry =
+  | YoutubeConnectionEntry
+  | InstagramConnectionEntry
+  | GenericSocialConnectionEntry
 
 type InfluencerProfile = {
   id: string
@@ -25,14 +76,51 @@ type InfluencerProfile = {
     socialLinks?: Record<string, string>
     highlight?: string
     audience?: string
+    socialConnections?: Record<string, SocialConnectionEntry>
   }
 }
 
+const SOCIAL_PLATFORMS: PlatformKey[] = ["youtube", "instagram"]
+
 const formatMetric = (value?: number) => {
-  if (!value) return "—"
+  if (value === undefined || value === null || Number.isNaN(value)) return "-"
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
   return `${value}`
+}
+
+const getConnectionMetrics = (platform: PlatformKey, connection?: SocialConnectionEntry) => {
+  if (!connection) return []
+
+  if (platform === "youtube") {
+    const entry = connection as YoutubeConnectionEntry
+    return [
+      { label: "Subscribers", value: entry.metrics?.subscribers },
+      { label: "Total views", value: entry.metrics?.totalViews },
+      { label: "Videos", value: entry.metrics?.videoCount },
+    ].filter((item) => item.value !== undefined && item.value !== null)
+  }
+
+  const entry = connection as InstagramConnectionEntry
+  return [
+    { label: "Followers", value: entry.metrics?.followers },
+    { label: "Posts", value: entry.metrics?.mediaCount },
+  ].filter((item) => item.value !== undefined && item.value !== null)
+}
+
+const getConnectionIdentity = (platform: PlatformKey, connection?: SocialConnectionEntry) => {
+  if (!connection) return []
+
+  if (platform === "youtube") {
+    const entry = connection as YoutubeConnectionEntry
+    return entry.profile?.title ? [`Channel: ${entry.profile.title}`] : []
+  }
+
+  const entry = connection as InstagramConnectionEntry
+  const lines: string[] = []
+  if (entry.profile?.username) lines.push(`Handle: ${entry.profile.username}`)
+  if (entry.profile?.pageName) lines.push(`Page: ${entry.profile.pageName}`)
+  return lines
 }
 
 export default function InfluencerProfilePage() {
@@ -41,6 +129,25 @@ export default function InfluencerProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [connectError, setConnectError] = useState<string | null>(null)
   const [connecting, setConnecting] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const connectedPlatform = searchParams.get("connected")
+  const [socialConnections, setSocialConnections] = useState<Record<string, SocialConnectionEntry>>({})
+
+  const loadConnections = async (signal: AbortSignal) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/connections`, {
+        credentials: "include",
+        cache: "no-store",
+        signal,
+      })
+      if (!response.ok) return
+      const data = await response.json()
+      setSocialConnections(data.connections || {})
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return
+      console.error("Failed to refresh social connections", err)
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -50,12 +157,14 @@ export default function InfluencerProfilePage() {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/me`, {
           credentials: "include",
+          cache: "no-store",
           signal: controller.signal,
         })
         if (!response.ok) throw new Error("Unable to load profile")
         const data: InfluencerProfile = await response.json()
         if (data.role !== "influencer") throw new Error("Expected an influencer account")
         setProfile(data)
+        await loadConnections(controller.signal)
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return
         setError(err instanceof Error ? err.message : "Profile unavailable")
@@ -65,7 +174,7 @@ export default function InfluencerProfilePage() {
     }
     load()
     return () => controller.abort()
-  }, [])
+  }, [connectedPlatform])
 
   const socialEntries = useMemo(() => {
     return Object.entries(profile?.influencerDetails?.socialLinks || {}).filter(([, value]) => Boolean(value))
@@ -76,7 +185,7 @@ export default function InfluencerProfilePage() {
     return [
       {
         label: "Rating",
-        value: profile.rating ? profile.rating.toFixed(1) : "—",
+        value: profile.rating ? profile.rating.toFixed(1) : "-",
         meta: `${profile.totalReviews ?? 0} reviews`,
       },
       {
@@ -84,7 +193,7 @@ export default function InfluencerProfilePage() {
         value: formatMetric(profile.influencerDetails?.followers),
         meta: profile.influencerDetails?.engagement
           ? `Engagement ${profile.influencerDetails.engagement.toFixed(1)}%`
-          : "Engagement —",
+          : "Engagement -",
       },
       {
         label: "Channels",
@@ -97,14 +206,17 @@ export default function InfluencerProfilePage() {
   const heroSummary =
     profile?.influencerDetails?.summary ?? "Handbook-grade creator focused on measurable collaborations."
   const heroAvatar = profile?.profilePicture || "/images/avatar.png"
-  const connections = profile?.influencerDetails?.socialConnections ?? {}
+  const connections: Record<string, SocialConnectionEntry> = {
+    ...(profile?.influencerDetails?.socialConnections ?? {}),
+    ...socialConnections,
+  }
 
-  const connectEndpoints: Record<"youtube" | "instagram", string> = {
+  const connectEndpoints: Record<PlatformKey, string> = {
     youtube: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/connect/youtube`,
     instagram: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/connect/instagram`,
   }
 
-  const handleConnect = async (platform: keyof typeof connectEndpoints) => {
+  const handleConnect = async (platform: PlatformKey) => {
     setConnectError(null)
     setConnecting(platform)
     try {
@@ -128,7 +240,7 @@ export default function InfluencerProfilePage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
       {loading && (
         <Card className="border-slate-200 bg-white/90 shadow-sm">
-          <CardContent className="p-6 text-sm text-slate-600">Loading influencer profile…</CardContent>
+          <CardContent className="p-6 text-sm text-slate-600">Loading influencer profile...</CardContent>
         </Card>
       )}
       {error && (
@@ -139,7 +251,7 @@ export default function InfluencerProfilePage() {
 
       {profile && (
         <>
-          <section className="rounded-[32px] border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-900/70 p-6 shadow-2xl shadow-cyan-500/20 text-white">
+          <section className="rounded-[32px] border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-900/70 p-6 text-white shadow-2xl shadow-cyan-500/20">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <Avatar className="h-20 w-20 border border-white/40 bg-white/10 text-xl font-semibold uppercase text-white">
                 <AvatarImage src={heroAvatar} alt={profile.name} />
@@ -160,7 +272,7 @@ export default function InfluencerProfilePage() {
                   )}
                 </div>
                 <p className="text-sm text-white/70">@{profile.username || "creator"}</p>
-                <p className="mt-2 text-sm text-white/80 max-w-2xl leading-relaxed">{heroSummary}</p>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/80">{heroSummary}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" className="border border-white/40 text-white hover:bg-white/10" asChild>
@@ -179,8 +291,8 @@ export default function InfluencerProfilePage() {
                   <p className="text-xs text-white/60">{stat.meta}</p>
                 </div>
               ))}
-          </div>
-        </section>
+            </div>
+          </section>
 
           <Card className="border-slate-200 bg-white/90 shadow-sm">
             <CardHeader>
@@ -190,10 +302,13 @@ export default function InfluencerProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {["youtube", "instagram"].map((platform) => {
+              {SOCIAL_PLATFORMS.map((platform) => {
                 const connection = connections[platform]
                 const label = platform.charAt(0).toUpperCase() + platform.slice(1)
                 const isConnecting = connecting === platform
+                const metricLines = getConnectionMetrics(platform, connection)
+                const identityLines = getConnectionIdentity(platform, connection)
+
                 return (
                   <div
                     key={platform}
@@ -202,30 +317,36 @@ export default function InfluencerProfilePage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
-                        {connection?.stats ? (
+                        {connection ? (
                           <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                            <p>Subscribers {formatMetric(connection.stats.followers)}</p>
-                            {connection.stats.views && (
-                              <p>Views total {formatMetric(connection.stats.views)}</p>
-                            )}
-                            {connection.stats.engagement && (
-                              <p>Avg engagement {connection.stats.engagement}%</p>
+                            {metricLines.length > 0 ? (
+                              metricLines.map((item) => (
+                                <p key={item.label}>
+                                  {item.label} {formatMetric(item.value)}
+                                </p>
+                              ))
+                            ) : (
+                              <p>Connected</p>
                             )}
                           </div>
                         ) : (
                           <p className="text-xs text-slate-500 dark:text-slate-400">Not connected</p>
                         )}
                       </div>
-                      <Button size="sm" variant="ghost" onClick={() => handleConnect(platform as "youtube" | "instagram")} disabled={Boolean(connecting)}>
-                        {isConnecting ? "Connecting…" : connection ? "Reconnect" : "Connect"}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleConnect(platform)}
+                        disabled={Boolean(connecting)}
+                      >
+                        {isConnecting ? "Connecting..." : connection ? "Reconnect" : "Connect"}
                       </Button>
                     </div>
-                    {connection?.metadata?.channelTitle && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Channel: {connection.metadata.channelTitle}</p>
-                    )}
-                    {connection?.metadata?.username && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Handle: {connection.metadata.username}</p>
-                    )}
+                    {identityLines.map((line) => (
+                      <p key={line} className="text-xs text-slate-500 dark:text-slate-400">
+                        {line}
+                      </p>
+                    ))}
                     {connection?.lastSynced && (
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         Last synced {new Date(connection.lastSynced).toLocaleString()}

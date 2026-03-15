@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
 type Priority = "low" | "medium" | "high"
+type PaymentMethod = "direct" | "escrow"
 
 export default function NewCampaignPage() {
   const router = useRouter()
@@ -19,6 +20,7 @@ export default function NewCampaignPage() {
   const [objective, setObjective] = useState("")
   const [niche, setNiche] = useState("")
   const [priority, setPriority] = useState<Priority>("medium")
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("direct")
   const [budgetTotal, setBudgetTotal] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
@@ -41,6 +43,7 @@ export default function NewCampaignPage() {
           objective: objective.trim(),
           niche: niche.trim() || "General",
           priority,
+          paymentMethod,
           budgetTotal: Number(budgetTotal),
           startDate,
           endDate,
@@ -109,6 +112,34 @@ export default function NewCampaignPage() {
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
                 </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Payment Method</label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("direct")}
+                    className={`rounded-lg border-2 p-4 text-left transition-all ${
+                      paymentMethod === "direct"
+                        ? "border-emerald-500 bg-emerald-50 dark:border-emerald-400 dark:bg-emerald-500/10"
+                        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">Direct Payment</p>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Funds transfer directly to creators</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("escrow")}
+                    disabled
+                    className="cursor-not-allowed rounded-lg border-2 border-slate-200 bg-slate-100 p-4 text-left opacity-50 dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <p className="font-semibold text-slate-600 dark:text-slate-400">Secure Escrow via Vooki</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">Coming soon...</p>
+                  </button>
+                </div>
               </div>
 
               <div>
