@@ -223,7 +223,7 @@ export const signIn = async (req: Request, res: Response): Promise<any> => {
       secure: process.env.NODE_ENV === "production",
       maxAge:
         Number(process.env.JWT_AUTH_TOKEN_MAXAGE) || 5 * 24 * 60 * 60 * 1000,
-      sameSite: "strict",
+      sameSite: "lax",
     });
 
     return res.json({
@@ -503,7 +503,7 @@ export const completeSocialAuth = async (
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
-      sameSite: "strict",
+      sameSite: "lax",
     });
     res.status(201).json({ message: "Signup successful" });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
 import UserModel from "../models/Users";
+import { normalizeSocialConnectionsRecord } from "../utils/socialConnections";
 import { uploadProfilePhotoToCloud } from "../utils/uploadProfilePhotoToCloud";
 
 const clamp = (value: number, min: number, max: number) =>
@@ -18,11 +19,9 @@ export const profile = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const socialConnectionsInput = user?.influencerDetails?.socialConnections;
-    const socialConnections =
-      socialConnectionsInput instanceof Map
-        ? Object.fromEntries(socialConnectionsInput)
-        : socialConnectionsInput || {};
+    const socialConnections = normalizeSocialConnectionsRecord(
+      user?.influencerDetails?.socialConnections
+    );
 
     return res.status(200).json({
       ...user,

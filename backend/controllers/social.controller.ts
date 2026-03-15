@@ -4,6 +4,12 @@ import { google } from "googleapis";
 import crypto from "crypto";
 import UserModel from "../models/Users";
 import { SocialConnection } from "../types/user";
+import { generateToken } from "../utils/generateToken";
+import {
+  mergeSocialConnection,
+  normalizeSocialConnectionsRecord,
+  toSocialConnectionsMap,
+} from "../utils/socialConnections";
 
 const STATE_SECRET = process.env.SOCIAL_STATE_SECRET || "super-secret";
 const STATE_TTL_MS = 5 * 60 * 1000; // 5 mins
@@ -41,23 +47,34 @@ const requireAuthUser = (req: Request, res: Response) => {
   return userId as string;
 };
 
+const AUTH_COOKIE_MAXAGE = Number(process.env.JWT_AUTH_TOKEN_MAXAGE) || 5 * 24 * 60 * 60 * 1000;
+
+const setAuthTokenCookie = (res: Response, user: any) => {
+  const token = generateToken(user._id.toString(), user.role);
+  res.cookie("auth_token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: AUTH_COOKIE_MAXAGE,
+    sameSite: "lax",
+  });
+};
+
 const saveSocialConnection = async (
   user: any,
   platform: string,
   payload: SocialConnection
 ) => {
   const details = user.influencerDetails || {};
-  const connections = new Map(details.socialConnections || []);
-  const existing = connections.get(platform) || {};
-  connections.set(platform, {
-    ...existing,
-    ...payload,
-    lastSynced: payload.lastSynced ?? new Date(),
-  });
-  details.socialConnections = connections;
-  user.influencerDetails = details;
+  const connections = toSocialConnectionsMap(details.socialConnections);
+  const nextConnection = mergeSocialConnection(platform, connections.get(platform), payload);
+  connections.set(platform, nextConnection);
+  user.influencerDetails = {
+    ...details,
+    socialConnections: connections,
+  };
   user.markModified("influencerDetails.socialConnections");
   await user.save();
+  return nextConnection;
 };
 
 const buildYoutubeClient = () => {
@@ -136,7 +153,6 @@ const handleSocialCallback = async (
 };
 
 export const startYoutubeConnect = async (req: Request, res: Response) => {
-  console.log("Starting YouTube connect flow",req.user);
   const userId = requireAuthUser(req, res);
   if (!userId) return;
   if (!ensureInfluencer(req)) {
@@ -172,24 +188,31 @@ export const handleYoutubeCallback = async (req: Request, res: Response) => {
     if (!channel) {
       throw { status: 400, message: "Unable to fetch YouTube channel" };
     }
-    const stats = {
-      followers: Number(channel.statistics?.subscriberCount || 0),
-      views: Number(channel.statistics?.viewCount || 0),
+    const metrics = {
       subscribers: Number(channel.statistics?.subscriberCount || 0),
-      engagement: Number(channel.statistics?.commentCount || 0),
+      totalViews: Number(channel.statistics?.viewCount || 0),
+      videoCount: Number(channel.statistics?.videoCount || 0),
+      hiddenSubscriberCount: Boolean(channel.statistics?.hiddenSubscriberCount),
     };
     const user = await UserModel.findById(userId);
     if (!user) throw { status: 404, message: "User not found" };
     await saveSocialConnection(user, "youtube", {
+      platform: "youtube",
       accessToken: tokens.access_token ?? undefined,
       refreshToken: tokens.refresh_token ?? undefined,
       expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
-      metadata: {
+      profile: {
         channelId: channel.id,
-        channelTitle: channel.snippet?.title,
+        title: channel.snippet?.title,
+        customUrl: channel.snippet?.customUrl,
+        avatarUrl:
+          channel.snippet?.thumbnails?.high?.url ||
+          channel.snippet?.thumbnails?.default?.url,
       },
-      stats,
+      metrics,
+      lastSynced: new Date(),
     });
+    setAuthTokenCookie(res, user);
     return res.redirect(`${process.env.FRONTEND_URL}/influencer/profile?connected=youtube`);
   });
 };
@@ -227,25 +250,26 @@ export const handleInstagramCallback = async (req: Request, res: Response) => {
     const { data: igProfile } = await axios.get(
       `https://graph.facebook.com/v17.0/${igId}?fields=id,username,followers_count,media_count,profile_picture_url&access_token=${page.access_token}`
     );
-    const stats = {
+    const metrics = {
       followers: Number(igProfile.followers_count || 0),
-      views: Number(igProfile.media_count || 0),
-      engagement: Number(igProfile.media_count || 0),
-      subscribers: Number(igProfile.followers_count || 0),
+      mediaCount: Number(igProfile.media_count || 0),
     };
     const user = await UserModel.findById(userId);
     if (!user) throw { status: 404, message: "User not found" };
     await saveSocialConnection(user, "instagram", {
+      platform: "instagram",
       accessToken: page.access_token,
-      metadata: {
+      profile: {
         instagramId: igId,
         username: igProfile.username,
         profilePicture: igProfile.profile_picture_url,
         pageId: page.id,
         pageName: page.name,
       },
-      stats,
+      metrics,
+      lastSynced: new Date(),
     });
+    setAuthTokenCookie(res, user);
     return res.redirect(`${process.env.FRONTEND_URL}/influencer/profile?connected=instagram`);
   });
 };
@@ -256,7 +280,7 @@ export const connectSocialAccount = async (req: Request, res: Response) => {
   if (!ensureInfluencer(req)) {
     return res.status(403).json({ message: "Only influencers can connect social accounts" });
   }
-  const { platform, accessToken, refreshToken, expiresIn, metadata, stats } = req.body;
+  const { platform, accessToken, refreshToken, expiresIn, profile, metadata, metrics, stats } = req.body;
   if (!platform || typeof platform !== "string") {
     return res.status(400).json({ message: "Platform is required" });
   }
@@ -265,13 +289,15 @@ export const connectSocialAccount = async (req: Request, res: Response) => {
     return res.status(404).json({ message: "User not found" });
   }
   await saveSocialConnection(user, platform, {
+    platform,
     accessToken,
     refreshToken,
     expiresAt: expiresIn ? new Date(Date.now() + Number(expiresIn) * 1000) : undefined,
-    metadata,
-    stats,
+    profile: typeof profile === "object" && profile ? profile : metadata,
+    metrics: typeof metrics === "object" && metrics ? metrics : stats,
+    lastSynced: new Date(),
   });
-  return res.status(200).json({ message: "Social account connected", platform, stats });
+  return res.status(200).json({ message: "Social account connected", platform });
 };
 
 export const getSocialConnections = async (req: Request, res: Response) => {
@@ -279,36 +305,29 @@ export const getSocialConnections = async (req: Request, res: Response) => {
   if (!userId) return;
   const user = await UserModel.findById(userId).select("influencerDetails.socialConnections");
   if (!user) return res.status(404).json({ message: "User not found" });
-  const connections = user.influencerDetails?.socialConnections || new Map();
   return res.status(200).json({
-    connections: Object.fromEntries(connections),
+    connections: normalizeSocialConnectionsRecord(user.influencerDetails?.socialConnections),
   });
 };
 
 export const updateSocialMetrics = async (req: Request, res: Response) => {
   const userId = requireAuthUser(req, res);
   if (!userId) return;
-  const { platform, stats } = req.body;
-  if (!platform || typeof platform !== "string" || typeof stats !== "object") {
+  const { platform, metrics, stats } = req.body;
+  const nextMetrics = typeof metrics === "object" && metrics ? metrics : stats;
+  if (!platform || typeof platform !== "string" || typeof nextMetrics !== "object" || !nextMetrics) {
     return res.status(400).json({ message: "Platform and stats are required" });
   }
   const user = await UserModel.findById(userId);
   if (!user) return res.status(404).json({ message: "User not found" });
-  const details = user.influencerDetails || {};
-  const connections = new Map(details.socialConnections || []);
-  const entry = connections.get(platform);
-  if (!entry) {
+  const connections = toSocialConnectionsMap(user.influencerDetails?.socialConnections);
+  if (!connections.get(platform)) {
     return res.status(404).json({ message: "Connection not found" });
   }
-  entry.stats = {
-    ...entry.stats,
-    ...stats,
-  };
-  entry.lastSynced = new Date();
-  connections.set(platform, entry);
-  details.socialConnections = connections;
-  user.influencerDetails = details;
-  user.markModified("influencerDetails.socialConnections");
-  await user.save();
+  await saveSocialConnection(user, platform, {
+    platform,
+    metrics: nextMetrics,
+    lastSynced: new Date(),
+  });
   return res.status(200).json({ message: "Stats updated", platform });
 };
