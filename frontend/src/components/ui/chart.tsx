@@ -103,6 +103,7 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
@@ -256,6 +257,7 @@ const ChartTooltipContent = React.forwardRef<
       </div>
     )
   })
+/* eslint-enable @typescript-eslint/no-explicit-any */
 ChartTooltipContent.displayName = 'ChartTooltip'
 
 const ChartLegend = RechartsPrimitive.Legend
