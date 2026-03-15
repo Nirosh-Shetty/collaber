@@ -9,6 +9,7 @@ import {
   verifyOtp,
   getOAuthSession,
   getSocketToken,
+  getCurrentUser,
 } from "../controllers/auth/auth.controller";
 import { generateToken } from "../utils/generateToken";
 import { IUser } from "../types/user";
@@ -123,6 +124,9 @@ authRouter.post("/complete-social-auth", completeSocialAuth);
 // Get socket token endpoint - for frontend to fetch token from httpOnly cookie
 // Protected with auth middleware to ensure only authenticated users can fetch tokens
 authRouter.get("/get-socket-token", authMiddleware, getSocketToken);
+
+// Get current user endpoint - for Auth context to fetch logged in user profile
+authRouter.get("/me", authMiddleware, getCurrentUser);
 
 authRouter.post("/signout", signout);
 

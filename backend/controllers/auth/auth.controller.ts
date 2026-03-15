@@ -583,3 +583,40 @@ export const getSocketToken = async (
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// Get current user profile - used by Auth context to fetch logged in user data
+export const getCurrentUser = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = await UserModel.findById(userId).select(
+      "id name email username role profilePicture brandName"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      data: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        profilePicture: user.profilePicture,
+        // brandName: user?.brandName,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

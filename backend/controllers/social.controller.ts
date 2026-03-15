@@ -58,7 +58,7 @@ const setAuthTokenCookie = (res: Response, user: any) => {
     sameSite: "lax",
   });
 };
-
+   
 const saveSocialConnection = async (
   user: any,
   platform: string,

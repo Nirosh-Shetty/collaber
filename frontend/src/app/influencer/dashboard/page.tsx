@@ -3,6 +3,8 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ProtectedRoute } from "@/components/protected-route"
+import { useAuth } from "@/hooks/useAuth"
 import {
   ArrowRight,
   Calendar,
@@ -108,6 +110,17 @@ const platformMetrics = [
 
 export default function InfluencerDashboard() {
   return (
+    <ProtectedRoute requiredRole="influencer">
+      <InfluencerDashboardContent />
+    </ProtectedRoute>
+  )
+}
+
+function InfluencerDashboardContent() {
+  const { user } = useAuth();
+  const firstName = user?.name?.split(" ")[0] || "Creator";
+
+  return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:space-y-8 lg:px-8">
       <Card className="border-white/60 bg-white/85 shadow-xl shadow-cyan-100/40 backdrop-blur-sm">
         <CardContent className="flex flex-col gap-6 p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
@@ -116,7 +129,7 @@ export default function InfluencerDashboard() {
               <Sparkles className="mr-1 h-3.5 w-3.5" /> Creator Dashboard
             </Badge>
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Hi John, your week looks strong.</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Hi {firstName}, your week looks strong.</h1>
               <p className="mt-1 text-sm text-slate-600 sm:text-base">
                 You are ahead on deliverables and your engagement trend is climbing.
               </p>

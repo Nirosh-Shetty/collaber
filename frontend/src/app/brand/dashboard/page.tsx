@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ProtectedRoute } from "@/components/protected-route"
+import { useAuth } from "@/hooks/useAuth"
 import {
   AlertTriangle,
   ArrowRight,
@@ -44,14 +46,18 @@ const campaignRows = [
   },
 ]
 
-export default function BrandDashboard() {
+function BrandDashboardContent() {
+  const { user } = useAuth();
+  const brandName = user?.brandName || "Campaign Operations";
+  const userName = user?.name || "Brand";
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:space-y-8 lg:px-8">
       <Card className="border-white/60 bg-white/85 shadow-xl shadow-cyan-100/40 backdrop-blur-sm">
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <Badge className="border-0 bg-cyan-100 text-cyan-900 hover:bg-cyan-100">Brand Command Center</Badge>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">TechCorp Campaign Operations</h1>
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{brandName}</h1>
             <p className="mt-1 text-sm text-slate-600">Monitor spend, creator output, and campaign momentum in one place.</p>
           </div>
           <Button className="w-full bg-slate-900 text-white hover:bg-slate-800 sm:w-auto">
@@ -203,5 +209,13 @@ export default function BrandDashboard() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function BrandDashboard() {
+  return (
+    <ProtectedRoute requiredRole="brand">
+      <BrandDashboardContent />
+    </ProtectedRoute>
   )
 }
