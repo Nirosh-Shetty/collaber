@@ -55,6 +55,7 @@ const fileToDataUrl = (file: File) =>
 
 export default function InfluencerProfileEditPage() {
   const [form, setForm] = useState<InfluencerFormState>(emptyForm)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)

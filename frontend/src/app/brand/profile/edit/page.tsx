@@ -47,6 +47,7 @@ const fileToDataUrl = (file: File) =>
 
 export default function BrandProfileEditPage() {
   const [form, setForm] = useState<BrandFormState>(emptyForm)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
