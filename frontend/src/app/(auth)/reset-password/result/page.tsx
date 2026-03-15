@@ -27,7 +27,7 @@ interface ResultConfig {
 export default function ResetPassword1ResultPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const status = (searchParams.get("status") as ResultStatus) || "success"
+  const status = (searchParams?.get("status") as ResultStatus) || "success"
 
   const getResultConfig = (status: ResultStatus): ResultConfig => {
     const configs: Record<ResultStatus, ResultConfig> = {
