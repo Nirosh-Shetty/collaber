@@ -112,10 +112,14 @@ const ChartTooltipContent = React.forwardRef<
       indicator?: 'line' | 'dot' | 'dashed'
       nameKey?: string
       labelKey?: string
+      active?: boolean
+      payload?: Array<any>
+      label?: any
+      labelFormatter?: (value: any, payload: any) => React.ReactNode
+      formatter?: (value: any, name: any, item: any, index: number, payload: any) => React.ReactNode
     }
->(
-  (
-    {
+>((props: any, ref: React.ForwardedRef<HTMLDivElement>) => {
+    const {
       active,
       payload,
       className,
@@ -129,9 +133,7 @@ const ChartTooltipContent = React.forwardRef<
       color,
       nameKey,
       labelKey,
-    },
-    ref,
-  ) => {
+    } = props
     const { config } = useChart()
 
     const tooltipLabel = React.useMemo(() => {
@@ -253,8 +255,7 @@ const ChartTooltipContent = React.forwardRef<
         </div>
       </div>
     )
-  },
-)
+  })
 ChartTooltipContent.displayName = 'ChartTooltip'
 
 const ChartLegend = RechartsPrimitive.Legend
