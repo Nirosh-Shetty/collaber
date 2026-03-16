@@ -30,7 +30,6 @@ const EarningSchema = new Schema<IEarning>(
     campaignId: {
       type: String,
       required: true,
-      index: true,
     },
     brandId: {
       type: String,

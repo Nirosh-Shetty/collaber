@@ -60,7 +60,7 @@ const DeliverableSchema = new Schema<IDeliverable>(
 
 const PromotionSchema = new Schema<IPromotion>(
   {
-    campaignId: { type: String, required: true, index: true },
+    campaignId: { type: String, required: true },
     brandId: { type: String, required: true, index: true },
     influencerId: { type: String, required: true, index: true },
     campaignTitle: { type: String, required: true, trim: true, maxlength: 140 },

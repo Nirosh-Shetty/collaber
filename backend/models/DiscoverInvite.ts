@@ -26,7 +26,6 @@ const DiscoverInviteSchema = new Schema<IDiscoverInvite>(
     campaignId: {
       type: String,
       required: true,
-      index: true,
     },
     campaignLabel: {
       type: String,
