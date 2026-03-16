@@ -48,7 +48,7 @@ type InstagramConnectionEntry = {
 }
 
 type GenericSocialConnectionEntry = {
-  platform: string
+  platform?: string
   profile?: Record<string, unknown>
   metrics?: Record<string, unknown>
   lastSynced?: string
@@ -59,61 +59,64 @@ type SocialConnectionEntry =
   | InstagramConnectionEntry
   | GenericSocialConnectionEntry
 
-interface InfluencerProfile {
-  _id: string
-  user: string
-  bio?: string
-  profileProof?: string
-  category?: string[]
-  socialConnections?: Record<string, SocialConnectionEntry>
-  pastClients?: string[]
-  averageEngagementRate?: number
-  hireable?: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-interface User {
-  _id: string
-  username: string
-  email: string
+type InfluencerProfile = {
+  id: string
+  role: "influencer"
   name: string
-  profilePhotoUrl?: string
-  bio?: string
-  role: string
+  username?: string
+  email?: string
+  profilePicture?: string
+  rating?: number
+  totalReviews?: number
+  influencerDetails?: {
+    niche?: string
+    followers?: number
+    engagement?: number
+    summary?: string
+    socialLinks?: Record<string, string>
+    highlight?: string
+    audience?: string
+    socialConnections?: Record<string, SocialConnectionEntry>
+  }
 }
 
-function getMetricsLines(entry: SocialConnectionEntry): string[] {
-  const lines: string[] = []
+const SOCIAL_PLATFORMS: PlatformKey[] = ["youtube", "instagram"]
 
-  if (entry.platform === "youtube") {
-    if (entry.metrics?.subscribers)
-      lines.push(`${(entry.metrics.subscribers as number / 1000).toFixed(1)}K Subscribers`)
-    if (entry.metrics?.videoCount) lines.push(`${entry.metrics.videoCount} Videos`)
-    if (entry.metrics?.totalViews)
-      lines.push(`${((entry.metrics.totalViews as number) / 1000000).toFixed(1)}M Views`)
-    if (entry.profile?.customUrl)
-      lines.push(`youtube.com/${(entry.profile.customUrl as string).replace("http://www.youtube.com/", "")}`)
-  } else if (entry.platform === "instagram") {
-    if (entry.metrics?.followers) lines.push(`${(entry.metrics.followers as number / 1000).toFixed(1)}K Followers`)
-    if (entry.metrics?.mediaCount) lines.push(`${entry.metrics.mediaCount} Posts`)
-    if (entry.profile?.username)
-      lines.push(`@${entry.profile.username as string}`)
-  }
-
-  if (entry.lastSynced) {
-    const lastSync = new Date(entry.lastSynced)
-    const now = new Date()
-    const diffMinutes = Math.floor((now.getTime() - lastSync.getTime()) / (1000 * 60))
-    if (diffMinutes < 60) lines.push(`Synced ${diffMinutes}min ago`)
-    else if (diffMinutes < 1440) lines.push(`Synced ${Math.floor(diffMinutes / 60)}h ago`)
-    else lines.push(`Synced ${Math.floor(diffMinutes / 1440)}d ago`)
-  }
-
-  return lines
+const formatMetric = (value?: number) => {
+  if (value === undefined || value === null || Number.isNaN(value)) return "-"
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+  return `${value}`
 }
 
-function getProfileLines(entry: SocialConnectionEntry): string[] {
+const getConnectionMetrics = (platform: PlatformKey, connection?: SocialConnectionEntry) => {
+  if (!connection) return []
+
+  if (platform === "youtube") {
+    const entry = connection as YoutubeConnectionEntry
+    return [
+      { label: "Subscribers", value: entry.metrics?.subscribers },
+      { label: "Total views", value: entry.metrics?.totalViews },
+      { label: "Videos", value: entry.metrics?.videoCount },
+    ].filter((item) => item.value !== undefined && item.value !== null)
+  }
+
+  const entry = connection as InstagramConnectionEntry
+  return [
+    { label: "Followers", value: entry.metrics?.followers },
+    { label: "Posts", value: entry.metrics?.mediaCount },
+  ].filter((item) => item.value !== undefined && item.value !== null)
+}
+
+const getConnectionIdentity = (platform: PlatformKey, connection?: SocialConnectionEntry) => {
+  if (!connection) return []
+
+  if (platform === "youtube") {
+    const entry = connection as YoutubeConnectionEntry
+    return entry.profile?.title ? [`Channel: ${entry.profile.title}`] : []
+  }
+
+  const entry = connection as InstagramConnectionEntry
   const lines: string[] = []
   if (entry.profile?.username) lines.push(`Handle: ${entry.profile.username}`)
   if (entry.profile?.pageName) lines.push(`Page: ${entry.profile.pageName}`)
@@ -127,7 +130,7 @@ export function ProfileContent() {
   const [connectError, setConnectError] = useState<string | null>(null)
   const [connecting, setConnecting] = useState<string | null>(null)
   const searchParams = useSearchParams()
-  const connectedPlatform = searchParams?.get("connected") ?? null
+  const connectedPlatform = searchParams?.get("connected")
   const [socialConnections, setSocialConnections] = useState<Record<string, SocialConnectionEntry>>({})
 
   const loadConnections = async (signal: AbortSignal) => {
@@ -149,342 +152,335 @@ export function ProfileContent() {
   useEffect(() => {
     const controller = new AbortController()
 
-    const fetchProfile = async () => {
+    const load = async () => {
+      setLoading(true)
+      setError(null)
       try {
-        setLoading(true)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/influencer/profile`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/profile/me`, {
           credentials: "include",
+          cache: "no-store",
           signal: controller.signal,
         })
-
-        if (!response.ok) {
-          setError("Failed to load profile")
-          return
-        }
-
-        const data = await response.json()
-        setProfile(data.profile)
-        setSocialConnections(data.profile?.socialConnections || {})
+        if (!response.ok) throw new Error("Unable to load profile")
+        const data: InfluencerProfile = await response.json()
+        if (data.role !== "influencer") throw new Error("Expected an influencer account")
+        setProfile(data)
+        await loadConnections(controller.signal)
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return
-        console.error("Error fetching profile:", err)
-        setError("Failed to load profile")
+        setError(err instanceof Error ? err.message : "Profile unavailable")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProfile()
+    load()
     return () => controller.abort()
-  }, [])
-
-  useEffect(() => {
-    if (connectedPlatform) {
-      const timer = setTimeout(() => {
-        const controller = new AbortController()
-        loadConnections(controller.signal)
-      }, 500)
-
-      return () => clearTimeout(timer)
-    }
   }, [connectedPlatform])
 
-  const handleDisconnectPlatform = async (platform: PlatformKey) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/${platform}/disconnect`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
-      )
+  const socialEntries = useMemo(() => {
+    return Object.entries(profile?.influencerDetails?.socialLinks || {}).filter(([, value]) => Boolean(value))
+  }, [profile])
 
-      if (response.ok) {
-        setSocialConnections((prev) => ({
-          ...prev,
-          [platform]: undefined,
-        }))
-      }
-    } catch (err) {
-      console.error("Failed to disconnect platform", err)
-    }
+  const heroStats = useMemo(() => {
+    if (!profile) return []
+    return [
+      {
+        label: "Rating",
+        value: profile.rating ? profile.rating.toFixed(1) : "-",
+        meta: `${profile.totalReviews ?? 0} reviews`,
+      },
+      {
+        label: "Followers",
+        value: formatMetric(profile.influencerDetails?.followers),
+        meta: profile.influencerDetails?.engagement
+          ? `Engagement ${profile.influencerDetails.engagement.toFixed(1)}%`
+          : "Engagement -",
+      },
+      {
+        label: "Channels",
+        value: socialEntries.length,
+        meta: "Live social links",
+      },
+    ]
+  }, [profile, socialEntries])
+
+  const heroSummary =
+    profile?.influencerDetails?.summary ?? "Handbook-grade creator focused on measurable collaborations."
+  const heroAvatar = profile?.profilePicture || "/images/avatar.png"
+  const connections: Record<string, SocialConnectionEntry> = {
+    ...(profile?.influencerDetails?.socialConnections ?? {}),
+    ...socialConnections,
   }
 
-  const handleConnectPlatform = async (platform: PlatformKey) => {
+  const connectEndpoints: Record<PlatformKey, string> = {
+    youtube: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/connect/youtube`,
+    instagram: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/connect/instagram`,
+  }
+
+  const handleConnect = async (platform: PlatformKey) => {
     setConnectError(null)
     setConnecting(platform)
-
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/${platform}/auth-url`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      )
-
-      if (!response.ok) {
-        setConnectError("Failed to authorize")
-        setConnecting(null)
-        return
-      }
-
+      const response = await fetch(connectEndpoints[platform], {
+        method: "GET",
+        credentials: "include",
+      })
       const data = await response.json()
-
-      if (data.authUrl) {
-        window.location.href = data.authUrl
-      } else {
-        setConnectError("No authorization URL provided")
-        setConnecting(null)
+      if (!response.ok || !data.url) {
+        throw new Error(data?.message || "Unable to build consent flow")
       }
-    } catch (err) {
-      console.error("Error connecting platform:", err)
-      setConnectError("Failed to connect. Please try again.")
+      window.location.href = data.url
+    } catch (err: unknown) {
+      setConnectError(err instanceof Error ? err.message : "Failed to initiate connection")
+    } finally {
       setConnecting(null)
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-500">Loading profile...</div>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <Card className="border-slate-200 bg-white/90 shadow-sm">
+          <CardContent className="p-6 text-sm text-slate-600">Loading influencer profile...</CardContent>
+        </Card>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-red-500">{error}</div>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <Card className="border-slate-200 bg-white/90 shadow-sm">
+          <CardContent className="p-6 text-sm text-rose-600">{error}</CardContent>
+        </Card>
       </div>
     )
   }
 
+  if (!profile) {
+    return null
+  }
+
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="border-b pb-8">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <Avatar className="h-20 w-20">
-              {/* User profile photo would go here */}
-              <AvatarFallback>IN</AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold">Influencer Profile</h1>
-              <p className="text-muted-foreground mt-2">Manage your social media connections</p>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[32px] border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-900/70 p-6 text-white shadow-2xl shadow-cyan-500/20">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <Avatar className="h-20 w-20 border border-white/40 bg-white/10 text-xl font-semibold uppercase text-white">
+            <AvatarImage src={heroAvatar} alt={profile.name} />
+            <AvatarFallback className="bg-slate-900/50 text-white">
+              {profile.name
+                .split(" ")
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-3xl font-semibold tracking-tight">{profile.name}</h1>
+              <Badge className="border-0 bg-emerald-100/30 text-emerald-100">Influencer</Badge>
+              {profile.influencerDetails?.niche && (
+                <Badge className="border-0 bg-cyan-500/20 text-cyan-100">{profile.influencerDetails.niche}</Badge>
+              )}
             </div>
+            <p className="text-sm text-white/70">@{profile.username || "creator"}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/80">{heroSummary}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" className="border border-white/40 text-white hover:bg-white/10" asChild>
+              <Link href="/influencer/profile/edit">Edit profile</Link>
+            </Button>
+            <Button variant="outline" className="border-white/50 text-white">
+              Share profile
+            </Button>
           </div>
         </div>
-      </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {heroStats.map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-white/30 bg-white/5 px-4 py-3">
+              <p className="text-xs uppercase tracking-widest text-white/60">{stat.label}</p>
+              <p className="text-2xl font-semibold">{stat.value}</p>
+              <p className="text-xs text-white/60">{stat.meta}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* Social Platforms Section */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Connected Platforms</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* YouTube Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Youtube className="h-5 w-5" />
-                  YouTube
-                </CardTitle>
-                {socialConnections.youtube && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Connected
-                  </Badge>
-                )}
-              </div>
-              <CardDescription>Connect your YouTube channel</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {socialConnections.youtube ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={socialConnections.youtube.profile?.avatarUrl as string} />
-                      <AvatarFallback>YT</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold">
-                        {(socialConnections.youtube.profile?.title as string) || "YouTube Channel"}
-                      </p>
-                      {getProfileLines(socialConnections.youtube).map((line, idx) => (
-                        <p key={idx} className="text-sm text-muted-foreground">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
+      <Card className="border-slate-200 bg-white/90 shadow-sm">
+        <CardHeader>
+          <CardTitle>Social connections</CardTitle>
+          <CardDescription>
+            Only OAuth-approved accounts populate these stats; no manual links are accepted now.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {SOCIAL_PLATFORMS.map((platform) => {
+            const connection = connections[platform]
+            const label = platform.charAt(0).toUpperCase() + platform.slice(1)
+            const isConnecting = connecting === platform
+            const metricLines = getConnectionMetrics(platform, connection)
+            const identityLines = getConnectionIdentity(platform, connection)
+
+            return (
+              <div
+                key={platform}
+                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-900/70"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
+                    {connection ? (
+                      <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        {metricLines.length > 0 ? (
+                          metricLines.map((item) => (
+                            <p key={item.label}>
+                              {item.label} {formatMetric(item.value)}
+                            </p>
+                          ))
+                        ) : (
+                          <p>Connected</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Not connected</p>
+                    )}
                   </div>
-
-                  {getMetricsLines(socialConnections.youtube).length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 pt-4 border-t">
-                      {getMetricsLines(socialConnections.youtube).map((metric, idx) => (
-                        <div key={idx} className="text-sm">
-                          <p className="text-muted-foreground">{metric}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDisconnectPlatform("youtube")}
-                      className="w-full"
-                    >
-                      Disconnect
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Connect your YouTube channel to showcase your content and reach
-                  </p>
                   <Button
-                    onClick={() => handleConnectPlatform("youtube")}
-                    disabled={connecting !== null}
-                    className="w-full"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleConnect(platform)}
+                    disabled={Boolean(connecting)}
                   >
-                    {connecting === "youtube" ? "Connecting..." : "Connect YouTube"}
+                    {isConnecting ? "Connecting..." : connection ? "Reconnect" : "Connect"}
                   </Button>
                 </div>
-              )}
-              {connectError && connecting === "youtube" && (
-                <p className="text-xs text-red-500 mt-2">{connectError}</p>
+                {identityLines.map((line) => (
+                  <p key={line} className="text-xs text-slate-500 dark:text-slate-400">
+                    {line}
+                  </p>
+                ))}
+                {connection?.lastSynced && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Last synced {new Date(connection.lastSynced).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+          {connectError && <p className="text-sm text-rose-600 dark:text-rose-300">{connectError}</p>}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+        <div className="space-y-6">
+          <Card className="border-slate-200 bg-white/90 shadow-sm">
+            <CardHeader>
+              <CardTitle>Audience pulse</CardTitle>
+              <CardDescription>Qualitative notes that help brands understand what you bring.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                <p className="text-sm font-semibold text-slate-900">Storyline</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {profile.influencerDetails?.highlight ??
+                    "Reliable creator with a focus on authentic shares and measurable outcomes."}
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  <p className="text-xs uppercase tracking-widest text-slate-500">Core audience</p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {profile.influencerDetails?.audience ?? "Lifestyle-forward, engaged shoppers."}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  <p className="text-xs uppercase tracking-widest text-slate-500">Primary lane</p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {profile.influencerDetails?.niche ?? "General entertainment"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 bg-white/90 shadow-sm">
+            <CardHeader>
+              <CardTitle>Active collaborations</CardTitle>
+              <CardDescription>High-level view of what you continue to deliver.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-slate-700">
+              <div className="flex items-center justify-between">
+                <p>Open invites</p>
+                <span className="text-base font-semibold text-slate-900">{socialEntries.length + 2}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <p>Milestones pending</p>
+                <span className="text-base font-semibold text-slate-900">{profile.totalReviews ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <p>Payment window</p>
+                <span className="text-base font-semibold text-slate-900">
+                  {profile.influencerDetails?.followers ? "15 days" : "TBD"}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-slate-200 bg-white/90 shadow-sm">
+            <CardHeader>
+              <CardTitle>Connected channels</CardTitle>
+              <CardDescription>Links your team can open instantly.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {socialEntries.length > 0 ? (
+                socialEntries.map(([platform, url]) => (
+                  <Link
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    key={platform}
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 transition hover:border-cyan-300"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-cyan-500" />
+                      {platform}
+                    </span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">Add your socials to unlock more invites.</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Instagram Card */}
-          <Card>
+          <Card className="border-slate-200 bg-white/90 shadow-sm">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Instagram className="h-5 w-5" />
-                  Instagram
-                </CardTitle>
-                {socialConnections.instagram && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Connected
-                  </Badge>
-                )}
-              </div>
-              <CardDescription>Connect your Instagram account</CardDescription>
+              <CardTitle>Contact</CardTitle>
+              <CardDescription>Always kept private, shared only when you approve invites.</CardDescription>
             </CardHeader>
             <CardContent>
-              {socialConnections.instagram ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={socialConnections.instagram.profile?.profilePicture as string} />
-                      <AvatarFallback>IG</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold">
-                        {(socialConnections.instagram.profile?.username as string) || "Instagram Account"}
-                      </p>
-                      {getProfileLines(socialConnections.instagram).map((line, idx) => (
-                        <p key={idx} className="text-sm text-muted-foreground">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-
-                  {getMetricsLines(socialConnections.instagram).length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 pt-4 border-t">
-                      {getMetricsLines(socialConnections.instagram).map((metric, idx) => (
-                        <div key={idx} className="text-sm">
-                          <p className="text-muted-foreground">{metric}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDisconnectPlatform("instagram")}
-                      className="w-full"
-                    >
-                      Disconnect
-                    </Button>
-                  </div>
+              <div className="space-y-2 text-sm text-slate-700">
+                <div className="flex items-center justify-between">
+                  <p>Email</p>
+                  <span className="text-slate-900">{profile.email ?? "Not shared yet"}</span>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Connect your Instagram account to showcase your audience
-                  </p>
-                  <Button
-                    onClick={() => handleConnectPlatform("instagram")}
-                    disabled={connecting !== null}
-                    className="w-full"
-                  >
-                    {connecting === "instagram" ? "Connecting..." : "Connect Instagram"}
-                  </Button>
+                <div className="flex items-center justify-between">
+                  <p>Handle</p>
+                  <span className="text-slate-900">@{profile.username || "creator"}</span>
                 </div>
-              )}
-              {connectError && connecting === "instagram" && (
-                <p className="text-xs text-red-500 mt-2">{connectError}</p>
-              )}
+                <div className="flex items-center justify-between">
+                  <p>Preferred response</p>
+                  <span className="text-slate-900">Within 24 hours</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
       </div>
-
-      {/* Bio Section */}
-      {profile?.bio && (
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Bio</h2>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-muted-foreground">{profile.bio}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
-  )
-}
-
-// Icon components
-function Youtube(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
-      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
-    </svg>
-  )
-}
-
-function Instagram(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-      <circle cx="17.5" cy="6.5" r="1.5"></circle>
-    </svg>
   )
 }
