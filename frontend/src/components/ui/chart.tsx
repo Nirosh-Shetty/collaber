@@ -262,13 +262,15 @@ ChartTooltipContent.displayName = 'ChartTooltip'
 
 const ChartLegend = RechartsPrimitive.Legend
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<'div'> &
-    Pick<RechartsPrimitive.LegendProps, 'payload' | 'verticalAlign'> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  React.ComponentProps<'div'> & {
+    payload?: any
+    verticalAlign?: 'top' | 'bottom'
+    hideIcon?: boolean
+    nameKey?: string
+  }
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = 'bottom', nameKey },
@@ -289,7 +291,7 @@ const ChartLegendContent = React.forwardRef<
           className,
         )}
       >
-        {payload.map((item) => {
+        {payload.map((item:any) => {
           const key = `${nameKey || item.dataKey || 'value'}`
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
 
@@ -318,6 +320,7 @@ const ChartLegendContent = React.forwardRef<
     )
   },
 )
+/* eslint-enable @typescript-eslint/no-explicit-any */
 ChartLegendContent.displayName = 'ChartLegend'
 
 // Helper to extract item config from a payload.
