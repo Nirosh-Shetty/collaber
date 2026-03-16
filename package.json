@@ -4,8 +4,5 @@
   },
   "devDependencies": {
     "prettier": "^3.7.4"
-  },
-  "dependencies": {
-    "next": "^16.1.6"
   }
 }
