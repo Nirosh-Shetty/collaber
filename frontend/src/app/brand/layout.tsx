@@ -104,6 +104,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
 
   const pageTitle = useMemo(() => {
+    if (!pathname) return "Brand Workspace"
     if (pathname.startsWith("/brand/campaigns/")) return "Campaign Detail"
     return routeTitle[pathname] ?? "Brand Workspace"
   }, [pathname])
