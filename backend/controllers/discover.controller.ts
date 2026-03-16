@@ -18,7 +18,7 @@ export const getDiscoverInfluencers = async (
   res: Response
 ): Promise<any> => {
   try {
-    const requesterRole = (req as any).user?.role;
+    const requesterRole = getRequestUser(req)?.role;
     if (!requesterRole) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -141,7 +141,7 @@ export const getDiscoverShortlist = async (
   res: Response
 ): Promise<any> => {
   try {
-    const requester = (req as any).user;
+    const requester = getRequestUser(req);
     if (!requester?.id) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -168,7 +168,7 @@ export const addToDiscoverShortlist = async (
   res: Response
 ): Promise<any> => {
   try {
-    const requester = (req as any).user;
+    const requester = getRequestUser(req);
     if (!requester?.id) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -211,7 +211,7 @@ export const removeFromDiscoverShortlist = async (
   res: Response
 ): Promise<any> => {
   try {
-    const requester = (req as any).user;
+    const requester = getRequestUser(req);
     if (!requester?.id) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -242,7 +242,7 @@ export const createDiscoverInvites = async (
   res: Response
 ): Promise<any> => {
   try {
-    const requester = (req as any).user;
+    const requester = getRequestUser(req);
     if (!requester?.id) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -330,7 +330,7 @@ export const getDiscoverInvites = async (
   res: Response
 ): Promise<any> => {
   try {
-    const requester = (req as any).user;
+    const requester = getRequestUser(req);
     if (!requester?.id) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -457,7 +457,7 @@ export const respondToDiscoverInvite = async (
   res: Response
 ): Promise<any> => {
   try {
-    const requester = (req as any).user;
+    const requester = getRequestUser(req);
     if (!requester?.id) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -505,3 +505,4 @@ export const respondToDiscoverInvite = async (
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+import { getRequestUser } from "../utils/requestUser";

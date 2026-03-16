@@ -1,8 +1,7 @@
-export interface PassportUser {
-  id: string;
-  uid: string;
+import { AuthenticatedRequestUser } from "./authenticatedUser";
+
+export interface PassportUser extends AuthenticatedRequestUser {
   name: string;
   email: string;
   username: string;
-  role: "influencer" | "brand" | "manager";
 }

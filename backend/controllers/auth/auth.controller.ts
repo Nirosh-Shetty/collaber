@@ -7,6 +7,7 @@ import { mailer } from "../../utils/mailer/index";
 import sessionStore from "../../utils/sessionStore";
 import { generateUsernameSuggestions } from "../../utils/generateUsernameSuggestions";
 import { uploadProfilePhotoToCloud } from "../../utils/uploadProfilePhotoToCloud";
+import { getRequestUserId } from "../../utils/requestUser";
 // import { apiResponse } from "../types/apiResponse";
 export const signUpBasicInfo = async (
   req: Request,
@@ -590,7 +591,7 @@ export const getCurrentUser = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = req.user?.id;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });

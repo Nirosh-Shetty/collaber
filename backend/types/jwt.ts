@@ -1,13 +1,15 @@
 export interface AccessTokenPayload {
-  uid: string;
-  role: "influencer" | "brand";
-  username: string;
+  id: string;
+  uid?: string;
+  role: "influencer" | "brand" | "manager";
+  username?: string;
   iat: number;
   exp: number;
 }
  
 export interface RefreshTokenPayload {
-  uid: string;
+  id: string;
+  uid?: string;
   tokenId: string;
   iat: number;
   exp: number;

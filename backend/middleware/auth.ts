@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AccessTokenPayload } from "../types/jwt";
+import { AuthenticatedRequestUser } from "../types/authenticatedUser";
  
 // export const auth =  (required: boolean = true) =>
 //   (req: Request, res: Response, next: NextFunction) => {
@@ -59,15 +60,21 @@ export const authMiddleware = (
     }
 
     const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
-    const decoded = jwt.verify(token, secret!) as any;
+    const decoded = jwt.verify(token, secret!) as AccessTokenPayload;
+    const userId = decoded.id || decoded.uid;
 
-    // Handle both token formats: { id, role } and { uid, role, username }
-    (req as any).user = {
-      id: decoded.id || decoded.uid,
-      uid: decoded.id || decoded.uid,
+    if (!userId) {
+      return res.status(401).json({ message: "Token missing user id" });
+    }
+
+    const authUser: AuthenticatedRequestUser = {
+      id: userId,
+      uid: decoded.uid ?? userId,
       role: decoded.role,
       username: decoded.username || "",
     };
+
+    req.user = authUser;
 
     next();
   } catch (err) {

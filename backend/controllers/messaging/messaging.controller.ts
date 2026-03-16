@@ -9,7 +9,7 @@ export const getConversations = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -79,7 +79,7 @@ export const getMessages = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -150,7 +150,7 @@ export const getOrCreateConversation = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -210,7 +210,7 @@ export const markMessagesAsRead = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -251,7 +251,7 @@ export const searchMessaging = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -323,7 +323,7 @@ export const archiveConversation = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -347,3 +347,4 @@ export const archiveConversation = async (
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+import { getRequestUserId } from "../../utils/requestUser";

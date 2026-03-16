@@ -53,7 +53,7 @@ const formatCampaign = (campaign: any) => ({
   updatedAt: campaign.updatedAt,
 });
 
-const getRequester = (req: Request) => (req as any).user;
+const getRequester = (req: Request) => getRequestUser(req);
 
 export const createCampaign = async (
   req: Request,
@@ -492,3 +492,4 @@ export const updateCampaignStatus = async (
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+import { getRequestUser } from "../utils/requestUser";

@@ -12,7 +12,6 @@ import {
   getCurrentUser,
 } from "../controllers/auth/auth.controller";
 import { generateToken } from "../utils/generateToken";
-import { IUser } from "../types/user";
 import { authMiddleware } from "../middleware/auth";
 import { checkUsernameUnique } from "../controllers/checkUsernameUnique.controller";
 import {
@@ -20,6 +19,7 @@ import {
   resetPassword,
   setPasswordForOAuth,
 } from "../controllers/auth/passowrd.controller";
+import { PassportUser } from "../types/passportUser";
 
 const authRouter = express.Router();
 
@@ -50,16 +50,13 @@ authRouter.get(
     session: false,
   }),
   async (req: Request, res: Response): Promise<void> => {
-    const user = req.user as unknown as IUser;
-    // console.log(req.query);
-    if (!user || typeof user !== "object") {
+    const user = req.user as PassportUser | undefined;
+    if (!user?.id) {
       res.status(401).json({ message: "Authentication failed" });
       return;
     }
 
-    // const safeUser = user as IUser;
-
-    const token = generateToken(user.id.toString(), user.role);
+    const token = generateToken(user.id, user.role);
 
     res.cookie("auth_token", token, {
       httpOnly: true,
@@ -92,13 +89,12 @@ authRouter.get(
     session: false,
   }),
   (req: Request, res: Response): any => {
-    const user = req.user as unknown as IUser;
-
-    if (!user || typeof user !== "object") {
+    const user = req.user as PassportUser | undefined;
+    if (!user?.id) {
       return res.status(401).json({ message: "Authentication failed" });
     }
 
-    const token = generateToken(user.id.toString(), user.role);
+    const token = generateToken(user.id, user.role);
 
     res.cookie("auth_token", token, {
       httpOnly: true,

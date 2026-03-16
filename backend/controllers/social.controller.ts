@@ -5,6 +5,7 @@ import crypto from "crypto";
 import UserModel from "../models/Users";
 import { SocialConnection } from "../types/user";
 import { generateToken } from "../utils/generateToken";
+import { getRequestUser, getRequestUserId } from "../utils/requestUser";
 import {
   mergeSocialConnection,
   normalizeSocialConnectionsRecord,
@@ -33,12 +34,11 @@ const verifyState = (state?: string) => {
   return userId;
 };
 
-const ensureInfluencer = (req: Request) => (req as any).user?.role === "influencer";
-// const getUserId = (req: Request) => (req as any).user?.id;
+const ensureInfluencer = (req: Request) => getRequestUser(req)?.role === "influencer";
 
 const requireAuthUser = (req: Request, res: Response) => {
-  console.log("Authenticated user:", (req as any).user?.id);
-  const userId = (req as any).user?.id
+  console.log("Authenticated user:", getRequestUser(req)?.id);
+  const userId = getRequestUserId(req)
   console.log("Extracted userId:", userId);
   if (!userId) {
     res.status(401).json({ message: "Unauthorized" });

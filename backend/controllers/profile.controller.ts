@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
 import UserModel from "../models/Users";
 import { normalizeSocialConnectionsRecord } from "../utils/socialConnections";
+import { getRequestUserId } from "../utils/requestUser";
 import { uploadProfilePhotoToCloud } from "../utils/uploadProfilePhotoToCloud";
 
 const clamp = (value: number, min: number, max: number) =>
@@ -9,7 +10,7 @@ const clamp = (value: number, min: number, max: number) =>
 
 export const profile = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -152,7 +153,7 @@ export const getPublicInfluencerProfile = async (req: Request, res: Response) =>
 
 export const updateInfluencerProfile = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id
+    const userId = getRequestUserId(req)
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" })
     }
@@ -205,7 +206,7 @@ export const updateInfluencerProfile = async (req: Request, res: Response) => {
 
 export const updateBrandProfile = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id
+    const userId = getRequestUserId(req)
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" })
     }
