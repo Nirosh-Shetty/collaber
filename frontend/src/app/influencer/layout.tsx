@@ -1,12 +1,13 @@
 "use client"
 
 import type React from "react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import axios from "axios"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useRouteTitle, isPathActive } from "@/hooks/useRouteTitle"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,7 +70,7 @@ export default function InfluencerLayout({
   const pathname = usePathname()
   const router = useRouter()
 
-  const pageTitle = useMemo(() => routeTitle[pathname] ?? "Influencer", [pathname])
+  const pageTitle = useRouteTitle(routeTitle, "Influencer")
 
   const handleSignOut = async () => {
     try {
@@ -87,7 +88,7 @@ export default function InfluencerLayout({
   }
 
   const SidebarItem = ({ item }: { item: (typeof sidebarItems)[0] }) => {
-    const isActive = pathname === item.url
+    const isActive = isPathActive(pathname, item.url)
     const content = (
       <Link
         href={item.url}
@@ -157,7 +158,7 @@ export default function InfluencerLayout({
                 className={`flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors ${
                   sidebarCollapsed ? "justify-center px-2" : "gap-3 px-3"
                 } ${
-                  pathname === "/influencer/settings"
+                  isPathActive(pathname, "/influencer/settings")
                     ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                 }`}

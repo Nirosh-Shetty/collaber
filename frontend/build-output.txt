@@ -1,0 +1,33 @@
+﻿
+> frontend@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.3.1
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 10.0s
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\niros\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], Re 
+   moteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/app/influencer/layout.tsx:90:22
+Type error: Cannot find name 'pathname'.
+
+[0m [90m 88 |[39m[0m
+[0m [90m 89 |[39m   [36mconst[39m [33mSidebarItem[39m [33m=[39m ({ 
+item }[33m:[39m { item[33m:[39m ([36mtypeof[39m 
+sidebarItems)[[35m0[39m] }) [33m=>[39m {[0m
+[0m[31m[1m>[22m[39m[90m 90 |[39m     [36mconst[39m isActive 
+[33m=[39m pathname [33m===[39m item[33m.[39murl[0m
+[0m [90m    |[39m                      [31m[1m^[22m[39m[0m
+[0m [90m 91 |[39m     [36mconst[39m content [33m=[39m ([0m
+[0m [90m 92 |[39m       [33m<[39m[33mLink[39m[0m
+[0m [90m 93 |[39m         href[33m=[39m{item[33m.[39murl}[0m
+Next.js build worker exited with code: 1 and signal: null

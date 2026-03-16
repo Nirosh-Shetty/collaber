@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import axios from "axios"
 import { usePathname, useRouter } from "next/navigation"
+import { useRouteTitle, isPathActive } from "@/hooks/useRouteTitle"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import {
@@ -60,9 +61,8 @@ const routeTitle: Record<string, string> = {
   "/brand/settings": "Settings",
 }
 
-function SidebarItem({ item, isCollapsed }: { item: (typeof sidebarItems)[0]; isCollapsed: boolean }) {
-  const pathname = usePathname()
-  const isActive = pathname === item.href
+function SidebarItem({ item, isCollapsed, pathname }: { item: (typeof sidebarItems)[0]; isCollapsed: boolean; pathname: string | null }) {
+  const isActive = isPathActive(pathname, item.href)
 
   const content = (
     <Link
@@ -103,11 +103,11 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router = useRouter()
 
-  const pageTitle = useMemo(() => {
-    if (!pathname) return "Brand Workspace"
-    if (pathname.startsWith("/brand/campaigns/")) return "Campaign Detail"
-    return routeTitle[pathname] ?? "Brand Workspace"
-  }, [pathname])
+  const pageTitle = useRouteTitle(
+    routeTitle,
+    "Brand Workspace",
+    [{ prefix: "/brand/campaigns/", title: "Campaign Detail" }]
+  )
 
   const handleSignOut = async () => {
     try {
@@ -150,7 +150,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
 
             <nav className="flex-1 space-y-2 px-4 py-5">
               {sidebarItems.map((item) => (
-                <SidebarItem key={item.name} item={item} isCollapsed={sidebarCollapsed} />
+                <SidebarItem key={item.href} item={item} isCollapsed={sidebarCollapsed} pathname={pathname} />
               ))}
             </nav>
 
@@ -160,7 +160,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
                 className={`flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors ${
                   sidebarCollapsed ? "justify-center px-2" : "gap-3 px-3"
                 } ${
-                  pathname === "/brand/settings"
+                  isPathActive(pathname, "/brand/settings")
                     ? "border border-cyan-200 bg-cyan-50 text-cyan-900"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                 }`}

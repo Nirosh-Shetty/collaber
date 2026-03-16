@@ -1,0 +1,34 @@
+﻿
+> frontend@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.3.1
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 11.0s
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\niros\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], Re 
+   moteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/app/influencer/layout.tsx:72:46
+Type error: Type 'null' cannot be used as an index type.
+
+[0m [90m 70 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
+[0m [90m 71 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 72 |[39m   [36mconst[39m pageTitle 
+[33m=[39m useMemo(() [33m=>[39m routeTitle[pathname] 
+[33m?[39m[33m?[39m [32m"Influencer"[39m[33m,[39m [pathname])[0m
+[0m [90m    |[39m                                              
+[31m[1m^[22m[39m[0m
+[0m [90m 73 |[39m[0m
+[0m [90m 74 |[39m   [36mconst[39m handleSignOut [33m=[39m 
+[36masync[39m () [33m=>[39m {[0m
+[0m [90m 75 |[39m     [36mtry[39m {[0m
+Next.js build worker exited with code: 1 and signal: null

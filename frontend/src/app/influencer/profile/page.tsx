@@ -130,7 +130,7 @@ export default function InfluencerProfilePage() {
   const [connectError, setConnectError] = useState<string | null>(null)
   const [connecting, setConnecting] = useState<string | null>(null)
   const searchParams = useSearchParams()
-  const connectedPlatform = searchParams.get("connected")
+  const connectedPlatform = searchParams?.get("connected") ?? null
   const [socialConnections, setSocialConnections] = useState<Record<string, SocialConnectionEntry>>({})
 
   const loadConnections = async (signal: AbortSignal) => {

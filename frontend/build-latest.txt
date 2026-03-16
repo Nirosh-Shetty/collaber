@@ -1,0 +1,43 @@
+﻿
+> frontend@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.3.1
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 14.0s
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\niros\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], Re 
+   moteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/components/ui/chart.tsx:268:41
+Type error: Type '"payload" | "verticalAlign"' does not satisfy the constraint 
+'"string" | "name" | "path" | "media" | "filter" | "fill" | "values" | 
+"content" | "style" | "clipPath" | "mask" | "key" | "type" | 
+"suppressHydrationWarning" | "className" | "id" | ... 432 more ... | 
+"onBBoxUpdate"'.
+  Type '"payload"' is not assignable to type '"string" | "name" | "path" | 
+"media" | "filter" | "fill" | "values" | "content" | "style" | "clipPath" | 
+"mask" | "key" | "type" | "suppressHydrationWarning" | "className" | "id" | 
+... 432 more ... | "onBBoxUpdate"'.
+
+[0m [90m 266 |[39m   [33mHTMLDivElement[39m[33m,[39m[0m
+[0m [90m 267 |[39m   [33mReact[39m[33m.[39m[33mComponentProps[39m[33m
+<[39m[32m'div'[39m[33m>[39m [33m&[39m[0m
+[0m[31m[1m>[22m[39m[90m 268 |[39m     [33mPick[39m[33m<[39m[33mRech
+artsPrimitive[39m[33m.[39m[33mLegendProps[39m[33m,[39m 
+[32m'payload'[39m [33m|[39m [32m'verticalAlign'[39m[33m>[39m 
+[33m&[39m {[0m
+[0m [90m     |[39m                                         
+[31m[1m^[22m[39m[0m
+[0m [90m 269 |[39m       hideIcon[33m?[39m[33m:[39m boolean[0m
+[0m [90m 270 |[39m       nameKey[33m?[39m[33m:[39m string[0m
+[0m [90m 271 |[39m     }[0m
+Next.js build worker exited with code: 1 and signal: null
