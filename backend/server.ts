@@ -18,6 +18,7 @@ const app = express();
 app.use(cookieParser());
 // Middleware
 app.use(express.json());
+console.log("frontend url:", process.env.FRONTEND_URL);
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
@@ -72,6 +73,6 @@ connectDB(); // Call the function to establish the connection
 
 // Start single server with both Express and Socket.io
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running at: http://localhost:${PORT}`);
+  console.log(`🚀 Server running at: ${process.env.FRONTEND_URL}`);
   console.log(`📡 Socket.io ready`);
 });
