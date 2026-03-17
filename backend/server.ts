@@ -20,12 +20,16 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "role"],
   })
 );
+
+app.get("/", (req, res) => {
+  res.send("Welcome to the API");
+});
 
 // Session (required by some strategies, even if you disable it later)
 //TODO: store the secret key in env file
