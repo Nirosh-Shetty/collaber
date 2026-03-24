@@ -21,7 +21,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
     // Not authenticated - redirect to sign in
     if (!user) {
-      router.push('/signin22');
+      router.push('/signin');
       return;
     }
 
