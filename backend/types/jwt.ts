@@ -1,7 +1,9 @@
+import { UserRole } from "./authenticatedUser";
+
 export interface AccessTokenPayload {
   id: string;
   uid?: string;
-  role: "influencer" | "brand" | "manager";
+  role: UserRole;
   username?: string;
   iat: number;
   exp: number;

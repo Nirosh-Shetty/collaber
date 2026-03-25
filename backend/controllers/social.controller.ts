@@ -3,7 +3,7 @@ import axios from "axios";
 import { google } from "googleapis";
 import crypto from "crypto";
 import UserModel from "../models/Users";
-import { SocialConnection } from "../types/user";
+import { IUser, SocialConnection } from "../types/user";
 import { generateToken } from "../utils/generateToken";
 import { getRequestUser, getRequestUserId } from "../utils/requestUser";
 import {
@@ -37,9 +37,7 @@ const verifyState = (state?: string) => {
 const ensureInfluencer = (req: Request) => getRequestUser(req)?.role === "influencer";
 
 const requireAuthUser = (req: Request, res: Response) => {
-  console.log("Authenticated user:", getRequestUser(req)?.id);
-  const userId = getRequestUserId(req)
-  console.log("Extracted userId:", userId);
+  const userId = getRequestUserId(req);
   if (!userId) {
     res.status(401).json({ message: "Unauthorized" });
     return null;
@@ -49,7 +47,7 @@ const requireAuthUser = (req: Request, res: Response) => {
 
 const AUTH_COOKIE_MAXAGE = Number(process.env.JWT_AUTH_TOKEN_MAXAGE) || 5 * 24 * 60 * 60 * 1000;
 
-const setAuthTokenCookie = (res: Response, user: any) => {
+const setAuthTokenCookie = (res: Response, user: Pick<IUser, "_id" | "role">) => {
   const token = generateToken(user._id.toString(), user.role);
   res.cookie("auth_token", token, {
     httpOnly: true,
@@ -60,7 +58,7 @@ const setAuthTokenCookie = (res: Response, user: any) => {
 };
    
 const saveSocialConnection = async (
-  user: any,
+  user: IUser,
   platform: string,
   payload: SocialConnection
 ) => {

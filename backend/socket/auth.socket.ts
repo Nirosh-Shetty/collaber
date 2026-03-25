@@ -31,10 +31,10 @@ export const socketAuthMiddleware = (socket: any, next: any) => {
     const decoded = jwt.verify(
       token,
       process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET!
-    ) as any;
+    ) as AccessTokenPayload;
 
-    // Handle both token formats: { id, role } and { uid, role, username }
-    socket.userId = decoded.id || decoded.uid;
+    // Canonical token field is `id`; `uid` remains as a legacy fallback.
+    socket.userId = decoded.id ?? decoded.uid;
     socket.userRole = decoded.role;
     socket.username = decoded.username || "";
 

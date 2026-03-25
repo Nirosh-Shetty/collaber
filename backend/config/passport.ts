@@ -129,7 +129,6 @@ passport.use(
 
         return done(null, {
           id: user._id.toString(),
-          uid: user._id.toString(),
           name: user.name,
           email: user.email,
           username: user.username,
@@ -281,7 +280,6 @@ passport.use(
         }
         return done(null, {
           id: user._id.toString(),
-          uid: user._id.toString(),
           name: user.name,
           email: user.email,
           username: user.username,
@@ -305,7 +303,6 @@ passport.deserializeUser(async (id: string, done) => {
     if (user) {
       done(null, {
         id: user._id.toString(),
-        uid: user._id.toString(),
         name: user.name,
         email: user.email,
         username: user.username,

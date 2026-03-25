@@ -61,7 +61,7 @@ export const authMiddleware = (
 
     const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
     const decoded = jwt.verify(token, secret!) as AccessTokenPayload;
-    const userId = decoded.id || decoded.uid;
+    const userId = decoded.id ?? decoded.uid;
 
     if (!userId) {
       return res.status(401).json({ message: "Token missing user id" });
@@ -69,6 +69,7 @@ export const authMiddleware = (
 
     const authUser: AuthenticatedRequestUser = {
       id: userId,
+      // Keep exposing uid during the migration so older code paths do not break.
       uid: decoded.uid ?? userId,
       role: decoded.role,
       username: decoded.username || "",
