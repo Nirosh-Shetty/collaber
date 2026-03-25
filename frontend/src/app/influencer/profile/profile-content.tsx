@@ -59,6 +59,17 @@ type SocialConnectionEntry =
   | InstagramConnectionEntry
   | GenericSocialConnectionEntry
 
+type PlatformMetric = {
+  label: string
+  value?: number
+}
+
+type PlatformCardDefinition<TConnection extends SocialConnectionEntry> = {
+  label: string
+  getMetrics: (connection: TConnection) => PlatformMetric[]
+  getIdentityLines: (connection: TConnection) => string[]
+}
+
 type InfluencerProfile = {
   id: string
   role: "influencer"
@@ -82,6 +93,12 @@ type InfluencerProfile = {
 
 const SOCIAL_PLATFORMS: PlatformKey[] = ["youtube", "instagram"]
 
+const isYoutubeConnection = (connection?: SocialConnectionEntry): connection is YoutubeConnectionEntry =>
+  connection?.platform === "youtube"
+
+const isInstagramConnection = (connection?: SocialConnectionEntry): connection is InstagramConnectionEntry =>
+  connection?.platform === "instagram"
+
 const formatMetric = (value?: number) => {
   if (value === undefined || value === null || Number.isNaN(value)) return "-"
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
@@ -89,38 +106,101 @@ const formatMetric = (value?: number) => {
   return `${value}`
 }
 
-const getConnectionMetrics = (platform: PlatformKey, connection?: SocialConnectionEntry) => {
-  if (!connection) return []
-
-  if (platform === "youtube") {
-    const entry = connection as YoutubeConnectionEntry
-    return [
-      { label: "Subscribers", value: entry.metrics?.subscribers },
-      { label: "Total views", value: entry.metrics?.totalViews },
-      { label: "Videos", value: entry.metrics?.videoCount },
-    ].filter((item) => item.value !== undefined && item.value !== null)
-  }
-
-  const entry = connection as InstagramConnectionEntry
-  return [
-    { label: "Followers", value: entry.metrics?.followers },
-    { label: "Posts", value: entry.metrics?.mediaCount },
-  ].filter((item) => item.value !== undefined && item.value !== null)
+const YOUTUBE_CARD_DEFINITION: PlatformCardDefinition<YoutubeConnectionEntry> = {
+  label: "YouTube",
+  getMetrics: (connection) =>
+    [
+      { label: "Subscribers", value: connection.metrics?.subscribers },
+      { label: "Total views", value: connection.metrics?.totalViews },
+      { label: "Videos", value: connection.metrics?.videoCount },
+    ].filter((item) => item.value !== undefined && item.value !== null),
+  getIdentityLines: (connection) => (connection.profile?.title ? [`Channel: ${connection.profile.title}`] : []),
 }
 
-const getConnectionIdentity = (platform: PlatformKey, connection?: SocialConnectionEntry) => {
-  if (!connection) return []
+const INSTAGRAM_CARD_DEFINITION: PlatformCardDefinition<InstagramConnectionEntry> = {
+  label: "Instagram",
+  getMetrics: (connection) =>
+    [
+      { label: "Followers", value: connection.metrics?.followers },
+      { label: "Posts", value: connection.metrics?.mediaCount },
+    ].filter((item) => item.value !== undefined && item.value !== null),
+  getIdentityLines: (connection) => {
+    const lines: string[] = []
+    if (connection.profile?.username) lines.push(`Handle: ${connection.profile.username}`)
+    if (connection.profile?.pageName) lines.push(`Page: ${connection.profile.pageName}`)
+    return lines
+  },
+}
 
-  if (platform === "youtube") {
-    const entry = connection as YoutubeConnectionEntry
-    return entry.profile?.title ? [`Channel: ${entry.profile.title}`] : []
-  }
+function SocialConnectionCard({
+  platform,
+  connection,
+  isConnecting,
+  onConnect,
+}: {
+  platform: PlatformKey
+  connection?: SocialConnectionEntry
+  isConnecting: boolean
+  onConnect: (platform: PlatformKey) => void
+}) {
+  const typedConnection = platform === "youtube"
+    ? (isYoutubeConnection(connection) ? connection : undefined)
+    : (isInstagramConnection(connection) ? connection : undefined)
+  const definition = platform === "youtube" ? YOUTUBE_CARD_DEFINITION : INSTAGRAM_CARD_DEFINITION
+  const metricLines =
+    platform === "youtube"
+      ? typedConnection && isYoutubeConnection(typedConnection)
+        ? YOUTUBE_CARD_DEFINITION.getMetrics(typedConnection)
+        : []
+      : typedConnection && isInstagramConnection(typedConnection)
+        ? INSTAGRAM_CARD_DEFINITION.getMetrics(typedConnection)
+        : []
+  const identityLines =
+    platform === "youtube"
+      ? typedConnection && isYoutubeConnection(typedConnection)
+        ? YOUTUBE_CARD_DEFINITION.getIdentityLines(typedConnection)
+        : []
+      : typedConnection && isInstagramConnection(typedConnection)
+        ? INSTAGRAM_CARD_DEFINITION.getIdentityLines(typedConnection)
+        : []
 
-  const entry = connection as InstagramConnectionEntry
-  const lines: string[] = []
-  if (entry.profile?.username) lines.push(`Handle: ${entry.profile.username}`)
-  if (entry.profile?.pageName) lines.push(`Page: ${entry.profile.pageName}`)
-  return lines
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-900/70">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">{definition.label}</p>
+          {typedConnection ? (
+            <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+              {metricLines.length > 0 ? (
+                metricLines.map((item) => (
+                  <p key={item.label}>
+                    {item.label} {formatMetric(item.value)}
+                  </p>
+                ))
+              ) : (
+                <p>Connected</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-slate-400">Not connected</p>
+          )}
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => onConnect(platform)} disabled={isConnecting}>
+          {isConnecting ? "Connecting..." : typedConnection ? "Reconnect" : "Connect"}
+        </Button>
+      </div>
+      {identityLines.map((line) => (
+        <p key={line} className="text-xs text-slate-500 dark:text-slate-400">
+          {line}
+        </p>
+      ))}
+      {typedConnection?.lastSynced && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Last synced {new Date(typedConnection.lastSynced).toLocaleString()}
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function ProfileContent() {
@@ -317,55 +397,15 @@ export function ProfileContent() {
         <CardContent className="space-y-4">
           {SOCIAL_PLATFORMS.map((platform) => {
             const connection = connections[platform]
-            const label = platform.charAt(0).toUpperCase() + platform.slice(1)
             const isConnecting = connecting === platform
-            const metricLines = getConnectionMetrics(platform, connection)
-            const identityLines = getConnectionIdentity(platform, connection)
-
             return (
-              <div
+              <SocialConnectionCard
                 key={platform}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-900/70"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
-                    {connection ? (
-                      <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                        {metricLines.length > 0 ? (
-                          metricLines.map((item) => (
-                            <p key={item.label}>
-                              {item.label} {formatMetric(item.value)}
-                            </p>
-                          ))
-                        ) : (
-                          <p>Connected</p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Not connected</p>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleConnect(platform)}
-                    disabled={Boolean(connecting)}
-                  >
-                    {isConnecting ? "Connecting..." : connection ? "Reconnect" : "Connect"}
-                  </Button>
-                </div>
-                {identityLines.map((line) => (
-                  <p key={line} className="text-xs text-slate-500 dark:text-slate-400">
-                    {line}
-                  </p>
-                ))}
-                {connection?.lastSynced && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Last synced {new Date(connection.lastSynced).toLocaleString()}
-                  </p>
-                )}
-              </div>
+                platform={platform}
+                connection={connection}
+                isConnecting={isConnecting}
+                onConnect={handleConnect}
+              />
             )
           })}
           {connectError && <p className="text-sm text-rose-600 dark:text-rose-300">{connectError}</p>}
