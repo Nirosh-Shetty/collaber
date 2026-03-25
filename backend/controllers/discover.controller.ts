@@ -408,7 +408,7 @@ export const getDiscoverInvites = async (
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { status = "pending", page = 1, limit = 20 } = req.query;
+    const { status = "pending", campaignId, page = 1, limit = 20 } = req.query;
     const pageNum = Math.max(1, parseNumber(page) ?? 1);
     const limitNum = clamp(parseNumber(limit) ?? 20, 1, 50);
     const skip = (pageNum - 1) * limitNum;
@@ -425,6 +425,9 @@ export const getDiscoverInvites = async (
         influencerId: requester.id,
         ...(statusFilter || {}),
       };
+      if (campaignId) {
+        query.campaignId = String(campaignId);
+      }
 
       const [items, total] = await Promise.all([
         DiscoverInviteModel.find(query)
@@ -483,6 +486,9 @@ export const getDiscoverInvites = async (
         brandId: requester.id,
         ...(statusFilter || {}),
       };
+      if (campaignId) {
+        query.campaignId = String(campaignId);
+      }
 
       const [items, total] = await Promise.all([
         DiscoverInviteModel.find(query)

@@ -56,8 +56,26 @@ type Promotion = {
   }
 }
 
+type InviteStatus = "pending" | "accepted" | "rejected" | "expired"
+
+type CampaignInvite = {
+  id: string
+  influencerId: string
+  influencerName: string
+  influencerHandle: string
+  influencerNiche: string
+  campaignId: string
+  campaignLabel: string
+  note: string
+  status: InviteStatus
+  promotionId?: string
+  promotionStatus?: PromotionStatus | ""
+  createdAt: string
+}
+
 type CampaignResponse = { campaign?: Campaign }
 type PromotionListResponse = { items?: Promotion[] }
+type InviteListResponse = { items?: CampaignInvite[] }
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)
@@ -84,11 +102,19 @@ const promotionPillClass: Record<PromotionStatus, string> = {
   completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
 }
 
+const invitePillClass: Record<InviteStatus, string> = {
+  pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  accepted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  rejected: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+  expired: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+}
+
 export default function CampaignDetailPage() {
   const params = useParams<{ campaignId: string }>()
   const campaignId = params?.campaignId
 
   const [campaign, setCampaign] = useState<Campaign | null>(null)
+  const [invites, setInvites] = useState<CampaignInvite[]>([])
   const [promotions, setPromotions] = useState<Promotion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -114,8 +140,12 @@ export default function CampaignDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [campaignRes, promotionsRes] = await Promise.all([
+      const [campaignRes, invitesRes, promotionsRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/campaigns/${campaignId}`, {
+          credentials: "include",
+          signal,
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/discover/invites?campaignId=${campaignId}&status=all&limit=50`, {
           credentials: "include",
           signal,
         }),
@@ -129,6 +159,13 @@ export default function CampaignDetailPage() {
 
       const campaignData: CampaignResponse = await campaignRes.json()
       setCampaign(campaignData?.campaign || null)
+
+      if (invitesRes.ok) {
+        const invitesData: InviteListResponse = await invitesRes.json()
+        setInvites(Array.isArray(invitesData?.items) ? invitesData.items : [])
+      } else {
+        setInvites([])
+      }
 
       if (promotionsRes.ok) {
         const promotionsData: PromotionListResponse = await promotionsRes.json()
@@ -165,6 +202,22 @@ export default function CampaignDetailPage() {
       ]),
     []
   )
+
+  const workspaceStats = useMemo(() => {
+    const pendingInvites = invites.filter((invite) => invite.status === "pending").length
+    const acceptedInvites = invites.filter((invite) => invite.status === "accepted").length
+    const livePromotions = promotions.filter((promotion) =>
+      ["accepted", "content_in_progress", "posted", "metrics_submitted", "payment_pending"].includes(promotion.status)
+    ).length
+    const completedPromotions = promotions.filter((promotion) => promotion.status === "completed").length
+
+    return {
+      pendingInvites,
+      acceptedInvites,
+      livePromotions,
+      completedPromotions,
+    }
+  }, [invites, promotions])
 
   const updatePromotionStatus = async (promotionId: string) => {
     const nextStatus = statusDrafts[promotionId]
@@ -332,6 +385,83 @@ export default function CampaignDetailPage() {
             </CardContent>
           </Card>
 
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Pending invites</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{workspaceStats.pendingInvites}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Accepted invites</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{workspaceStats.acceptedInvites}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Live collaborations</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{workspaceStats.livePromotions}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+              <CardContent className="p-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Completed collaborations</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{workspaceStats.completedPromotions}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-slate-100">Campaign pipeline</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">
+                Track outreach and see which invites have turned into active collaborations.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {invites.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                  No invites have been sent for this campaign yet.
+                </div>
+              ) : (
+                invites.map((invite) => (
+                  <div
+                    key={invite.id}
+                    className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                            {invite.influencerName || invite.influencerHandle || "Influencer"}
+                          </p>
+                          <Badge className={`border-0 text-[10px] capitalize ${invitePillClass[invite.status]}`}>
+                            {invite.status}
+                          </Badge>
+                          {invite.promotionStatus ? (
+                            <Badge className={`border-0 text-[10px] capitalize ${promotionPillClass[invite.promotionStatus]}`}>
+                              collab {invite.promotionStatus.replaceAll("_", " ")}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {invite.influencerHandle || "No handle"}{invite.influencerNiche ? ` - ${invite.influencerNiche}` : ""}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
+                          {invite.note || "Invite sent from discover."}
+                        </p>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        Sent {formatDate(invite.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
             <CardHeader>
               <CardTitle className="text-slate-900 dark:text-slate-100">Promotions</CardTitle>
@@ -343,7 +473,7 @@ export default function CampaignDetailPage() {
               <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Create Promotion</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Create a creator deal linked to this campaign.
+                  Use this for manual collaboration setup when you are not starting from discover invites.
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <Input
