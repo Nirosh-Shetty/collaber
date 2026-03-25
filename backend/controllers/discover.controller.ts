@@ -3,6 +3,8 @@ import UserModel from "../models/Users";
 import DiscoverShortlistModel from "../models/DiscoverShortlist";
 import DiscoverInviteModel from "../models/DiscoverInvite";
 import CampaignModel from "../models/Campaign";
+import PromotionModel from "../models/Promotion";
+import { getRequestUser } from "../utils/requestUser";
 
 const parseNumber = (value: unknown): number | undefined => {
   if (value === undefined || value === null || value === "") return undefined;
@@ -12,6 +14,77 @@ const parseNumber = (value: unknown): number | undefined => {
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+
+const buildPromotionSeedFromCampaign = (campaign: any) => {
+  const startDate = campaign?.startDate ? new Date(campaign.startDate) : new Date();
+  const endDate = campaign?.endDate ? new Date(campaign.endDate) : startDate;
+  const safePostAt = endDate >= startDate ? endDate : startDate;
+
+  return {
+    campaignTitle: String(campaign?.name || "Campaign collaboration").trim(),
+    product: String(campaign?.name || "Campaign deliverable").trim(),
+    campaignGoal: "awareness" as const,
+    deliverables: [
+      {
+        platform: "tbd",
+        format: "content",
+        quantity: 1,
+      },
+    ],
+    draftDueAt: startDate,
+    postAt: safePostAt,
+    requiresDraftApproval: true,
+    captionRequirements: "",
+    brandTagRequired: false,
+    hashtags: [],
+    linkRequired: false,
+    discountCode: "",
+    allowReuse: false,
+    paymentAmount: 0,
+    advanceAmount: 0,
+    paymentDueAt: safePostAt,
+    paymentMethod: "direct",
+    paymentStatus: "pending" as const,
+    performance: {
+      reach: 0,
+      views: 0,
+      engagement: 0,
+    },
+    status: "accepted" as const,
+  };
+};
+
+const findOrCreatePromotionForAcceptedInvite = async (invite: any, campaign: any) => {
+  const sourceInviteId = String(invite._id);
+  const existingByInvite = await PromotionModel.findOne({ sourceInviteId });
+  if (existingByInvite) {
+    return { promotion: existingByInvite, created: false };
+  }
+
+  const existingByCampaignAndInfluencer = await PromotionModel.findOne({
+    campaignId: String(invite.campaignId),
+    brandId: String(invite.brandId),
+    influencerId: String(invite.influencerId),
+  });
+
+  if (existingByCampaignAndInfluencer) {
+    if (!existingByCampaignAndInfluencer.sourceInviteId) {
+      existingByCampaignAndInfluencer.sourceInviteId = sourceInviteId;
+      await existingByCampaignAndInfluencer.save();
+    }
+    return { promotion: existingByCampaignAndInfluencer, created: false };
+  }
+
+  const promotion = await PromotionModel.create({
+    sourceInviteId,
+    campaignId: String(invite.campaignId),
+    brandId: String(invite.brandId),
+    influencerId: String(invite.influencerId),
+    ...buildPromotionSeedFromCampaign(campaign),
+  });
+
+  return { promotion, created: true };
+};
 
 export const getDiscoverInfluencers = async (
   req: Request,
@@ -362,16 +435,25 @@ export const getDiscoverInvites = async (
         DiscoverInviteModel.countDocuments(query),
       ]);
 
+      const inviteIds = items.map((item: any) => String(item._id));
       const brandIds = Array.from(new Set(items.map((item: any) => String(item.brandId))));
       const brands = await UserModel.find(
         { _id: { $in: brandIds } },
         { name: 1, username: 1, "brandDetails.companyName": 1, profilePicture: 1 }
       ).lean();
+      const promotions = await PromotionModel.find(
+        { sourceInviteId: { $in: inviteIds } },
+        { _id: 1, sourceInviteId: 1, status: 1 }
+      ).lean();
       const brandMap = new Map(brands.map((brand: any) => [String(brand._id), brand]));
+      const promotionMap = new Map(
+        promotions.map((promotion: any) => [String(promotion.sourceInviteId), promotion])
+      );
 
       return res.status(200).json({
         items: items.map((item: any) => {
           const brand = brandMap.get(String(item.brandId));
+          const promotion = promotionMap.get(String(item._id));
           return {
             id: String(item._id),
             brandId: String(item.brandId),
@@ -382,6 +464,8 @@ export const getDiscoverInvites = async (
             campaignLabel: item.campaignLabel || "",
             note: item.note || "",
             status: item.status,
+            promotionId: promotion?._id ? String(promotion._id) : "",
+            promotionStatus: promotion?.status || "",
             createdAt: item.createdAt,
           };
         }),
@@ -409,6 +493,7 @@ export const getDiscoverInvites = async (
         DiscoverInviteModel.countDocuments(query),
       ]);
 
+      const inviteIds = items.map((item: any) => String(item._id));
       const influencerIds = Array.from(
         new Set(items.map((item: any) => String(item.influencerId)))
       );
@@ -416,13 +501,21 @@ export const getDiscoverInvites = async (
         { _id: { $in: influencerIds } },
         { name: 1, username: 1, profilePicture: 1, "influencerDetails.niche": 1 }
       ).lean();
+      const promotions = await PromotionModel.find(
+        { sourceInviteId: { $in: inviteIds } },
+        { _id: 1, sourceInviteId: 1, status: 1 }
+      ).lean();
       const influencerMap = new Map(
         influencers.map((influencer: any) => [String(influencer._id), influencer])
+      );
+      const promotionMap = new Map(
+        promotions.map((promotion: any) => [String(promotion.sourceInviteId), promotion])
       );
 
       return res.status(200).json({
         items: items.map((item: any) => {
           const influencer = influencerMap.get(String(item.influencerId));
+          const promotion = promotionMap.get(String(item._id));
           return {
             id: String(item._id),
             influencerId: String(item.influencerId),
@@ -433,6 +526,8 @@ export const getDiscoverInvites = async (
             campaignLabel: item.campaignLabel || "",
             note: item.note || "",
             status: item.status,
+            promotionId: promotion?._id ? String(promotion._id) : "",
+            promotionStatus: promotion?.status || "",
             createdAt: item.createdAt,
           };
         }),
@@ -493,16 +588,53 @@ export const respondToDiscoverInvite = async (
     invite.status = action;
     await invite.save();
 
+    let promotion: any = null;
+    let collaborationCreated = false;
+
+    if (action === "accepted") {
+      const campaign = await CampaignModel.findOne({
+        _id: String(invite.campaignId),
+        brandId: String(invite.brandId),
+      })
+        .select("_id name startDate endDate")
+        .lean();
+
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found for invite" });
+      }
+
+      const promotionResult = await findOrCreatePromotionForAcceptedInvite(invite, campaign);
+      promotion = promotionResult.promotion;
+      collaborationCreated = promotionResult.created;
+
+      if (collaborationCreated) {
+        await CampaignModel.updateOne(
+          { _id: campaign._id, brandId: String(invite.brandId) },
+          { $inc: { acceptedCreators: 1 } }
+        );
+      }
+    }
+
     return res.status(200).json({
-      message: `Invite ${action}`,
+      message:
+        action === "accepted"
+          ? collaborationCreated
+            ? "Invite accepted and collaboration created"
+            : "Invite accepted and linked to existing collaboration"
+          : "Invite rejected",
       invite: {
         id: String(invite._id),
         status: invite.status,
       },
+      promotion: promotion
+        ? {
+            id: String(promotion._id),
+            status: promotion.status,
+          }
+        : null,
     });
   } catch (error) {
     console.error("Error responding to discover invite:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-import { getRequestUser } from "../utils/requestUser";

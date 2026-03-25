@@ -24,6 +24,18 @@ type InviteResponse = {
   items: Invite[]
 }
 
+type InviteActionResponse = {
+  message?: string
+  invite?: {
+    id: string
+    status: InviteStatus
+  }
+  promotion?: {
+    id: string
+    status: string
+  } | null
+}
+
 const statusBadgeStyles: Record<InviteStatus, string> = {
   pending: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
   accepted: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300",
@@ -95,12 +107,16 @@ export default function InfluencerInvitesPage() {
         throw new Error("Failed to update invite")
       }
 
+      const data: InviteActionResponse = await response.json()
+
       setInvites((previous) =>
         previous.map((invite) =>
           invite.id === inviteId ? { ...invite, status: action } : invite
         )
       )
-      setActionMessage(action === "accepted" ? "Invite accepted." : "Invite declined.")
+      setActionMessage(
+        data.message || (action === "accepted" ? "Invite accepted." : "Invite declined.")
+      )
     } catch {
       setActionMessage("Could not update invite status.")
     } finally {

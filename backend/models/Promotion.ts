@@ -17,6 +17,7 @@ export interface IDeliverable {
 }
 
 export interface IPromotion extends Document {
+  sourceInviteId?: string;
   campaignId: string;
   brandId: string;
   influencerId: string;
@@ -60,6 +61,7 @@ const DeliverableSchema = new Schema<IDeliverable>(
 
 const PromotionSchema = new Schema<IPromotion>(
   {
+    sourceInviteId: { type: String, index: true, sparse: true },
     campaignId: { type: String, required: true },
     brandId: { type: String, required: true, index: true },
     influencerId: { type: String, required: true, index: true },
@@ -116,6 +118,7 @@ const PromotionSchema = new Schema<IPromotion>(
 );
 
 PromotionSchema.index({ campaignId: 1, influencerId: 1 });
+PromotionSchema.index({ sourceInviteId: 1 }, { unique: true, sparse: true });
 PromotionSchema.index({ brandId: 1, status: 1, createdAt: -1 });
 PromotionSchema.index({ influencerId: 1, status: 1, createdAt: -1 });
 
