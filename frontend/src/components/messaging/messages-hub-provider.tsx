@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { MessagesHub, type RoleVariant } from "./messages-hub";
 import { useConversations, useMessaging, useConversationMessages, useSocket } from "@/lib/socket";
 import { messagingAPI } from "@/lib/socket/messaging-api";
@@ -18,11 +19,13 @@ export function MessagesHubProvider({
   subheading,
   composerPlaceholder,
 }: MessagesHubProviderProps) {
+  const searchParams = useSearchParams();
   const { conversations, isLoading: conversationsLoading, fetchConversations } = useConversations();
   const { isConnected, userId } = useSocket();
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(conversations[0]?.id || null);
+  const hasHandledQueryRef = useRef(false);
 
   const {
     messages,
@@ -94,6 +97,32 @@ export function MessagesHubProvider({
     status: conv.status as "active" | "pending" | "closed",
     online: false, // TODO: Add presence tracking
   }));
+
+  useEffect(() => {
+    if (!selectedConversationId && conversations.length > 0) {
+      setSelectedConversationId(conversations[0].id);
+    }
+  }, [conversations, selectedConversationId]);
+
+  useEffect(() => {
+    const requestedConversationId = searchParams?.get("conversationId");
+    const otherUserId = searchParams?.get("otherUserId");
+
+    if (requestedConversationId) {
+      setSelectedConversationId(requestedConversationId);
+      hasHandledQueryRef.current = true;
+      return;
+    }
+
+    if (!otherUserId || hasHandledQueryRef.current) return;
+    if (conversationsLoading) return;
+
+    hasHandledQueryRef.current = true;
+    handleCreateConversation(otherUserId).catch((error) => {
+      console.error("Failed to open collaboration conversation:", error);
+      hasHandledQueryRef.current = false;
+    });
+  }, [searchParams, conversationsLoading, handleCreateConversation]);
 
   if (conversationsLoading) {
     return (

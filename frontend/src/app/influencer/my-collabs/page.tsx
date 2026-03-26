@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -292,8 +293,8 @@ export default function MyCollaborations() {
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
-                  View details
+                <Button asChild size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
+                  <Link href={`/influencer/my-collabs/${promotion.id}`}>View details</Link>
                 </Button>
                 <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
                   <MessageSquare className="mr-2 h-4 w-4" /> Message brand

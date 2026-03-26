@@ -547,6 +547,14 @@ export default function CampaignDetailPage() {
                         ))}
                       </datalist>
                       <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        <Link href={`/brand/promotions/${promotion.id}`}>Open</Link>
+                      </Button>
+                      <Button
                         size="sm"
                         onClick={() => updatePromotionStatus(promotion.id)}
                         disabled={statusBusyId === promotion.id}
