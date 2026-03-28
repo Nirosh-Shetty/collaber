@@ -62,6 +62,14 @@ const formatPromotion = (promotion: any) => ({
     views: Number(promotion?.performance?.views || 0),
     engagement: Number(promotion?.performance?.engagement || 0),
   },
+  deliverySubmission: {
+    proofUrl: promotion?.deliverySubmission?.proofUrl || "",
+    notes: promotion?.deliverySubmission?.notes || "",
+    submittedAt: promotion?.deliverySubmission?.submittedAt,
+    reviewedAt: promotion?.deliverySubmission?.reviewedAt,
+    reviewStatus: promotion?.deliverySubmission?.reviewStatus || "",
+    reviewFeedback: promotion?.deliverySubmission?.reviewFeedback || "",
+  },
   status: promotion.status,
   createdAt: promotion.createdAt,
   updatedAt: promotion.updatedAt,
@@ -585,6 +593,112 @@ export const submitPromotionPerformance = async (
     });
   } catch (error) {
     console.error("Error submitting performance:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const submitPromotionDelivery = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const requester = getRequester(req);
+    if (!requester?.id) return res.status(401).json({ message: "Unauthorized" });
+    if (requester.role !== "influencer") {
+      return res.status(403).json({ message: "Only influencers can submit delivery proof" });
+    }
+
+    const { promotionId } = req.params;
+    const { proofUrl = "", notes = "" } = req.body || {};
+    if (!promotionId || !isValidObjectId(promotionId)) {
+      return res.status(404).json({ message: "Promotion not found" });
+    }
+
+    const promotion = await PromotionModel.findById(promotionId);
+    if (!promotion || !canAccessPromotion(promotion, requester)) {
+      return res.status(404).json({ message: "Promotion not found" });
+    }
+    if (!["accepted", "content_in_progress", "posted"].includes(promotion.status)) {
+      return res.status(409).json({ message: "Delivery proof can only be submitted during execution" });
+    }
+
+    promotion.deliverySubmission = {
+      proofUrl: String(proofUrl || "").trim(),
+      notes: String(notes || "").trim(),
+      submittedAt: new Date(),
+      reviewedAt: undefined,
+      reviewStatus: "pending",
+      reviewFeedback: "",
+    };
+
+    if (promotion.status === "accepted") {
+      promotion.status = "content_in_progress";
+    }
+
+    await promotion.save();
+
+    return res.status(200).json({
+      message: "Delivery proof submitted",
+      promotion: formatPromotion(promotion),
+    });
+  } catch (error) {
+    console.error("Error submitting delivery proof:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const reviewPromotionDelivery = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const requester = getRequester(req);
+    if (!requester?.id) return res.status(401).json({ message: "Unauthorized" });
+    if (requester.role !== "brand") {
+      return res.status(403).json({ message: "Only brands can review delivery proof" });
+    }
+
+    const { promotionId } = req.params;
+    const { action, feedback = "" } = req.body || {};
+    if (!promotionId || !isValidObjectId(promotionId)) {
+      return res.status(404).json({ message: "Promotion not found" });
+    }
+    if (action !== "approved" && action !== "changes_requested") {
+      return res.status(400).json({ message: "action must be approved or changes_requested" });
+    }
+
+    const promotion = await PromotionModel.findById(promotionId);
+    if (!promotion || !canAccessPromotion(promotion, requester)) {
+      return res.status(404).json({ message: "Promotion not found" });
+    }
+    if (!promotion.deliverySubmission?.submittedAt) {
+      return res.status(409).json({ message: "No delivery proof has been submitted yet" });
+    }
+
+    promotion.deliverySubmission = {
+      proofUrl: promotion.deliverySubmission.proofUrl || "",
+      notes: promotion.deliverySubmission.notes || "",
+      submittedAt: promotion.deliverySubmission.submittedAt,
+      reviewedAt: new Date(),
+      reviewStatus: action,
+      reviewFeedback: String(feedback || "").trim(),
+    };
+
+    if (action === "changes_requested") {
+      promotion.status = "content_in_progress";
+    }
+
+    await promotion.save();
+
+    return res.status(200).json({
+      message:
+        action === "approved"
+          ? "Delivery proof approved"
+          : "Change request sent to creator",
+      promotion: formatPromotion(promotion),
+    });
+  } catch (error) {
+    console.error("Error reviewing delivery proof:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -16,6 +16,15 @@ export interface IDeliverable {
   quantity: number;
 }
 
+export interface IDeliverySubmission {
+  proofUrl?: string;
+  notes?: string;
+  submittedAt?: Date;
+  reviewedAt?: Date;
+  reviewStatus?: "pending" | "approved" | "changes_requested";
+  reviewFeedback?: string;
+}
+
 export interface IPromotion extends Document {
   sourceInviteId?: string;
   campaignId: string;
@@ -45,6 +54,7 @@ export interface IPromotion extends Document {
     views: number;
     engagement: number;
   };
+  deliverySubmission?: IDeliverySubmission;
   status: PromotionStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -55,6 +65,22 @@ const DeliverableSchema = new Schema<IDeliverable>(
     platform: { type: String, required: true, trim: true },
     format: { type: String, required: true, trim: true },
     quantity: { type: Number, required: true, min: 1 },
+  },
+  { _id: false }
+);
+
+const DeliverySubmissionSchema = new Schema<IDeliverySubmission>(
+  {
+    proofUrl: { type: String, trim: true, default: "" },
+    notes: { type: String, trim: true, default: "" },
+    submittedAt: { type: Date, default: null },
+    reviewedAt: { type: Date, default: null },
+    reviewStatus: {
+      type: String,
+      enum: ["pending", "approved", "changes_requested"],
+      default: null,
+    },
+    reviewFeedback: { type: String, trim: true, default: "" },
   },
   { _id: false }
 );
@@ -97,6 +123,10 @@ const PromotionSchema = new Schema<IPromotion>(
       reach: { type: Number, default: 0, min: 0 },
       views: { type: Number, default: 0, min: 0 },
       engagement: { type: Number, default: 0, min: 0 },
+    },
+    deliverySubmission: {
+      type: DeliverySubmissionSchema,
+      default: () => ({}),
     },
     status: {
       type: String,

@@ -56,6 +56,14 @@ type Promotion = {
     views: number
     engagement: number
   }
+  deliverySubmission?: {
+    proofUrl?: string
+    notes?: string
+    submittedAt?: string
+    reviewedAt?: string
+    reviewStatus?: "pending" | "approved" | "changes_requested" | ""
+    reviewFeedback?: string
+  }
   status: PromotionStatus
   createdAt: string
   updatedAt: string
@@ -145,6 +153,8 @@ export function PromotionWorkspace({
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [submittingMetrics, setSubmittingMetrics] = useState(false)
   const [markingPaid, setMarkingPaid] = useState(false)
+  const [submittingDelivery, setSubmittingDelivery] = useState(false)
+  const [reviewingDelivery, setReviewingDelivery] = useState(false)
   const [nextStatus, setNextStatus] = useState<PromotionStatus | "">("")
   const [terms, setTerms] = useState<TermsFormState>({
     product: "",
@@ -167,6 +177,9 @@ export function PromotionWorkspace({
     views: "0",
     engagement: "0",
   })
+  const [deliveryProofUrl, setDeliveryProofUrl] = useState("")
+  const [deliveryNotes, setDeliveryNotes] = useState("")
+  const [reviewFeedback, setReviewFeedback] = useState("")
 
   const loadPromotion = async (signal?: AbortSignal) => {
     setLoading(true)
@@ -205,6 +218,9 @@ export function PromotionWorkspace({
           views: String(item.performance.views || 0),
           engagement: String(item.performance.engagement || 0),
         })
+        setDeliveryProofUrl(item.deliverySubmission?.proofUrl || "")
+        setDeliveryNotes(item.deliverySubmission?.notes || "")
+        setReviewFeedback(item.deliverySubmission?.reviewFeedback || "")
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return
@@ -231,6 +247,57 @@ export function PromotionWorkspace({
     role === "brand"
       ? `/brand/messages?otherUserId=${promotion?.influencerId || ""}`
       : `/influencer/messages?otherUserId=${promotion?.brandId || ""}`
+  const deliveryReviewStatus = promotion?.deliverySubmission?.reviewStatus || ""
+
+  const submitDeliveryProof = async () => {
+    if (!promotion) return
+    setSubmittingDelivery(true)
+    setMessage(null)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/promotions/${promotion.id}/delivery`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proofUrl: deliveryProofUrl.trim(),
+          notes: deliveryNotes.trim(),
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data?.message || "Failed to submit delivery proof")
+      setMessage(data?.message || "Delivery proof submitted.")
+      await loadPromotion()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to submit delivery proof")
+    } finally {
+      setSubmittingDelivery(false)
+    }
+  }
+
+  const reviewDeliveryProof = async (action: "approved" | "changes_requested") => {
+    if (!promotion) return
+    setReviewingDelivery(true)
+    setMessage(null)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/promotions/${promotion.id}/delivery/review`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          feedback: reviewFeedback.trim(),
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data?.message || "Failed to review delivery proof")
+      setMessage(data?.message || "Delivery review updated.")
+      await loadPromotion()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to review delivery proof")
+    } finally {
+      setReviewingDelivery(false)
+    }
+  }
 
   const saveTerms = async () => {
     if (!promotion) return
@@ -491,6 +558,41 @@ export function PromotionWorkspace({
               {role === "influencer" ? (
                 <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
                   <CardHeader>
+                    <CardTitle className="text-slate-900 dark:text-slate-100">Delivery proof</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                      Share the live asset link or proof for brand review before moving to metrics.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Proof URL</Label>
+                      <Input value={deliveryProofUrl} onChange={(e) => setDeliveryProofUrl(e.target.value)} placeholder="https://..." />
+                    </div>
+                    <div>
+                      <Label>Notes</Label>
+                      <Textarea value={deliveryNotes} onChange={(e) => setDeliveryNotes(e.target.value)} />
+                    </div>
+                    {deliveryReviewStatus ? (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
+                        Review status: {deliveryReviewStatus.replaceAll("_", " ")}
+                        {promotion.deliverySubmission?.reviewFeedback ? ` - ${promotion.deliverySubmission.reviewFeedback}` : ""}
+                      </div>
+                    ) : null}
+                    <Button
+                      onClick={submitDeliveryProof}
+                      disabled={submittingDelivery || !["accepted", "content_in_progress", "posted"].includes(promotion.status)}
+                      className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-cyan-600 dark:hover:bg-cyan-700"
+                    >
+                      {submittingDelivery ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Submit delivery proof
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {role === "influencer" ? (
+                <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+                  <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-slate-100">Performance submission</CardTitle>
                     <CardDescription className="text-slate-600 dark:text-slate-400">
                       Submit post results once the collaboration has been published.
@@ -571,6 +673,58 @@ export function PromotionWorkspace({
                   ) : null}
                 </CardContent>
               </Card>
+
+              {role === "brand" ? (
+                <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
+                  <CardHeader>
+                    <CardTitle className="text-slate-900 dark:text-slate-100">Delivery review</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                      Review creator proof before you move the collaboration into payment.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">Proof URL</p>
+                      <p className="mt-1 break-all text-xs text-slate-600 dark:text-slate-300">
+                        {promotion.deliverySubmission?.proofUrl || "No proof submitted yet."}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">Creator notes</p>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                        {promotion.deliverySubmission?.notes || "No notes submitted yet."}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Review feedback</Label>
+                      <Textarea value={reviewFeedback} onChange={(e) => setReviewFeedback(e.target.value)} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => reviewDeliveryProof("approved")}
+                        disabled={reviewingDelivery || !promotion.deliverySubmission?.submittedAt}
+                        className="flex-1 bg-slate-900 text-white hover:bg-slate-800 dark:bg-cyan-600 dark:hover:bg-cyan-700"
+                      >
+                        {reviewingDelivery ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Approve proof
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => reviewDeliveryProof("changes_requested")}
+                        disabled={reviewingDelivery || !promotion.deliverySubmission?.submittedAt}
+                        className="flex-1 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Request changes
+                      </Button>
+                    </div>
+                    {deliveryReviewStatus ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Current review: {deliveryReviewStatus.replaceAll("_", " ")}
+                      </p>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ) : null}
 
               <Card className="border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
                 <CardHeader>

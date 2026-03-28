@@ -5,6 +5,8 @@ import {
   getPromotionById,
   listPromotions,
   markPromotionPaid,
+  reviewPromotionDelivery,
+  submitPromotionDelivery,
   submitPromotionPerformance,
   updatePromotionStatus,
   updatePromotionTerms,
@@ -19,6 +21,8 @@ promotionRouter.post("/", createPromotion);
 promotionRouter.get("/:promotionId", getPromotionById);
 promotionRouter.patch("/:promotionId/terms", updatePromotionTerms);
 promotionRouter.patch("/:promotionId/status", updatePromotionStatus);
+promotionRouter.patch("/:promotionId/delivery", submitPromotionDelivery);
+promotionRouter.patch("/:promotionId/delivery/review", reviewPromotionDelivery);
 promotionRouter.patch("/:promotionId/performance", submitPromotionPerformance);
 promotionRouter.patch("/:promotionId/payment", markPromotionPaid);
 
